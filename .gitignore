@@ -1,9 +1,7 @@
 __pycache__/
 # data
-data/person_in_wifi_3d
-data/wipose
-!data/person_in_wifi_3d/process.py
-!data/wipose/process.py
+Data/Person-in-WiFi-3D/test_data
+Data/Person-in-WiFi-3D/train_data
 # feature
 features/
 # logs
