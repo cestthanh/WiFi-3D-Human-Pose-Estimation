@@ -28,11 +28,17 @@ NPY_PATH = r"D:\Thesis\WiFi-3D-Human-Pose-Estimation\Data\Person-in-WiFi-3D\trai
 # Option 3: Load entire directory
 # NPY_PATH = r"D:\Thesis_Docs\Person-in-WiFi-3D-data\test_data\keypoint"
 
-# Video path (optional — leave empty if you don't have video yet)
-VIDEO_PATH = ""
+# Video path (leave empty if no video)
+VIDEO_PATH = r"D:\Thesis\WiFi-3D-Human-Pose-Estimation\Data Preprocessing\Test GT\skeleton_viewer\Video demo\S11_02\output_h264.mp4"
 
-# Video source FPS — used for auto playback speed calculation
-VIDEO_FPS = 30
+# Time list path — maps frame_id to real timestamp for accurate video sync
+# Format per line: "frame_id_YYYY-MM-DD HH:MM:SS.ffffff"
+# Leave empty to fall back to VIDEO_FPS-based sync
+TIME_LIST_PATH = r"D:\Thesis\WiFi-3D-Human-Pose-Estimation\Data Preprocessing\Test GT\skeleton_viewer\Video demo\S11_02\time_list.txt"
+
+# Video source FPS — used ONLY if TIME_LIST_PATH is empty
+# Confirmed 15fps from ffmpeg (Azure Kinect color stream)
+VIDEO_FPS = 15
 
 PORT = 8891
 
@@ -142,6 +148,39 @@ def _natural_sort_key(filepath):
     return int(nums[-1]) if nums else 0
 
 
+def load_time_list(path_str):
+    """Parse time_list.txt → dict {frame_id (int): video_time_seconds (float)}.
+    Each line format: '506_2023-04-04 13:03:31.816916'
+    video_time = timestamp - timestamp[0] (relative to start of video).
+    Returns empty dict if path is empty or file not found."""
+    if not path_str:
+        return {}
+    try:
+        from datetime import datetime
+        timestamps = {}  # frame_id -> datetime
+        with open(path_str, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                underscore_pos = line.index('_')
+                frame_id = int(line[:underscore_pos])
+                dt_str = line[underscore_pos + 1:]
+                dt = datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S.%f')
+                timestamps[frame_id] = dt
+
+        if not timestamps:
+            return {}
+
+        t0 = min(timestamps.values())
+        result = {fid: (ts - t0).total_seconds() for fid, ts in timestamps.items()}
+        print(f"  Timelist: {len(result)} entries, duration={max(result.values()):.1f}s")
+        return result
+    except Exception as e:
+        print(f"  WARNING: Could not load time list: {e}")
+        return {}
+
+
 def load_pose_data(path_str):
     """Load pose data from .npy file(s). Returns (frames_list, names_list).
     Each frame is shape (num_persons, 14, 3)."""
@@ -190,6 +229,7 @@ def load_pose_data(path_str):
 class ViewerHandler(http.server.SimpleHTTPRequestHandler):
     pose_data = None
     frame_names = []
+    frame_timestamps = []   # list of video_time_seconds per skeleton frame, or []
     video_path = ""
 
     def log_message(self, format, *args):
@@ -221,6 +261,7 @@ class ViewerHandler(http.server.SimpleHTTPRequestHandler):
                 'frames': self.pose_data,
                 'num_frames': len(self.pose_data),
                 'frame_names': self.frame_names,
+                'frame_timestamps': self.frame_timestamps,  # [] if no time list
                 'has_video': bool(self.video_path),
                 'video_url': '/video' if self.video_path else ''
             }
@@ -285,13 +326,29 @@ def main():
     print(f"  Loaded : {NPY_PATH}")
     print(f"  Frames : {len(data)}")
     print(f"  Persons: {num_persons_first} (in first frame)")
+
+    # Build per-frame video timestamps using time_list
+    time_map = load_time_list(TIME_LIST_PATH)
+    import re
+    frame_timestamps = []
+    for name in names:
+        nums = re.findall(r'\d+', name)
+        fid = int(nums[-1]) if nums else -1
+        frame_timestamps.append(time_map.get(fid, None))
+    has_timestamps = any(t is not None for t in frame_timestamps)
+
     if VIDEO_PATH:
         print(f"  Video  : {VIDEO_PATH}")
     else:
         print(f"  Video  : (none)")
+    if has_timestamps:
+        print(f"  Sync   : timestamp-based (time_list.txt)")
+    else:
+        print(f"  Sync   : FPS-based ({VIDEO_FPS} fps)")
 
     ViewerHandler.pose_data = data
     ViewerHandler.frame_names = names
+    ViewerHandler.frame_timestamps = frame_timestamps if has_timestamps else []
     ViewerHandler.video_path = VIDEO_PATH
 
     os.chdir(os.path.dirname(os.path.abspath(__file__)))

@@ -444,6 +444,16 @@
     const video    = document.getElementById('video-player');
     const legendEl = document.getElementById('legend');
 
+    function getVideoTime(frameIdx) {
+      // Use real timestamp from time_list if available, else fall back to FPS estimate
+      if (appData.frame_timestamps && appData.frame_timestamps[frameIdx] != null) {
+        return appData.frame_timestamps[frameIdx];
+      }
+      const names = appData.frame_names;
+      const m = names[frameIdx] && names[frameIdx].match(/\d+$/);
+      return m ? parseInt(m[0]) / CFG.video_fps : frameIdx / CFG.video_fps;
+    }
+
     function goToFrame(idx) {
       if (!appData) return;
       currentFrame = Math.max(0, Math.min(idx, appData.num_frames - 1));
@@ -451,8 +461,9 @@
       counter.textContent = `${currentFrame + 1} / ${appData.num_frames}`;
       document.getElementById('file-info').textContent = appData.frame_names[currentFrame] || '';
       updatePose(appData.frames[currentFrame]);
-      if (appData.has_video && video.duration) {
-        video.currentTime = currentFrame / CFG.video_fps;
+      // Seek video to exact timestamp (only when not playing — during play, video runs freely)
+      if (appData.has_video && video.readyState >= 1 && !isPlaying) {
+        video.currentTime = getVideoTime(currentFrame);
       }
     }
 
@@ -465,18 +476,36 @@
       isPlaying = true;
       playBtn.textContent = '⏸';
       playBtn.classList.add('active');
+
+      // Seek video to current skeleton position then let it play freely
+      if (appData.has_video && video.readyState >= 1) {
+        video.currentTime = getVideoTime(currentFrame);
+        video.play();
+      }
+
       const fps = fpsSelect.value === 'auto' ? autoFps : parseInt(fpsSelect.value);
       playInterval = setInterval(() => {
-        if (currentFrame >= appData.num_frames - 1) { goToFrame(0); return; }
-        goToFrame(currentFrame + 1);
+        if (currentFrame >= appData.num_frames - 1) {
+          goToFrame(0);
+          if (appData.has_video) { video.currentTime = getVideoTime(0); video.play(); }
+          return;
+        }
+        currentFrame++;
+        slider.value = currentFrame;
+        counter.textContent = `${currentFrame + 1} / ${appData.num_frames}`;
+        document.getElementById('file-info').textContent = appData.frame_names[currentFrame] || '';
+        updatePose(appData.frames[currentFrame]);
+        // No video seek during play — video runs at its own pace from correct start position
       }, 1000 / fps);
     }
+
     function stopPlay() {
       isPlaying = false;
       playBtn.textContent = '▶';
       playBtn.classList.remove('active');
       if (playInterval) clearInterval(playInterval);
       playInterval = null;
+      if (appData && appData.has_video) video.pause();
     }
     playBtn.addEventListener('click', togglePlay);
     fpsSelect.addEventListener('change', () => { if (isPlaying) { stopPlay(); togglePlay(); } });
@@ -517,8 +546,14 @@
           video.src = data.video_url;
         }
 
-        // Auto-calculate playback FPS from sparse frame numbers
-        if (data.frame_names.length >= 2) {
+        // Auto FPS: use real timestamps if available, else fall back to frame number spacing
+        if (data.frame_timestamps && data.frame_timestamps.filter(t => t != null).length >= 2) {
+          const ts = data.frame_timestamps.filter(t => t != null);
+          const duration = ts[ts.length - 1] - ts[0];
+          autoFps = duration > 0 ? Math.round(ts.length / duration * 10) / 10 : 15;
+          fpsSelect.options[0].textContent = `Auto (${autoFps}) ✓timestamp`;
+          console.log(`Auto FPS from timestamps: ${autoFps} (${ts.length} frames over ${duration.toFixed(1)}s)`);
+        } else if (data.frame_names.length >= 2) {
           const nums = data.frame_names
             .map(n => { const m = n.match(/\d+$/); return m ? parseInt(m[0]) : 0; })
             .filter(x => x > 0);
@@ -526,11 +561,10 @@
             const span = nums[nums.length - 1] - nums[0];
             if (span > 0) {
               autoFps = Math.round(nums.length / (span / CFG.video_fps) * 10) / 10;
-              console.log(`Auto FPS: ${autoFps} (${nums.length} frames over ${(span / CFG.video_fps).toFixed(1)}s)`);
+              fpsSelect.options[0].textContent = `Auto (${autoFps})`;
             }
           }
         }
-        fpsSelect.options[0].textContent = `Auto (${autoFps})`;
 
         onResize();
         goToFrame(0);
