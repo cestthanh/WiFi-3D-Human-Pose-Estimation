@@ -23,18 +23,18 @@ from urllib.parse import urlparse
 # NPY_PATH = r"D:\Thesis_Docs\Person-in-WiFi-3D-data\test_data\keypoint\S11_01_308.npy"
 
 # Option 2: Load a sequence (glob pattern)
-NPY_PATH = r"D:\Thesis\WiFi-3D-Human-Pose-Estimation\Data\Person-in-WiFi-3D\train_data\keypoint\S11_02_*.npy"
+NPY_PATH = r"D:\Thesis\WiFi-3D-Human-Pose-Estimation\Data\Person-in-WiFi-3D\train_data\keypoint\S11_19_*.npy"
 
 # Option 3: Load entire directory
 # NPY_PATH = r"D:\Thesis_Docs\Person-in-WiFi-3D-data\test_data\keypoint"
 
 # Video path (leave empty if no video)
-VIDEO_PATH = r"D:\Thesis\WiFi-3D-Human-Pose-Estimation\Data Preprocessing\Test GT\skeleton_viewer\Video demo\S11_02\output_h264.mp4"
+VIDEO_PATH = r"D:\Thesis\WiFi-3D-Human-Pose-Estimation\Data Preprocessing\Test GT\skeleton_viewer\Video demo\S11_19\output_h264.mp4"
 
 # Time list path — maps frame_id to real timestamp for accurate video sync
 # Format per line: "frame_id_YYYY-MM-DD HH:MM:SS.ffffff"
 # Leave empty to fall back to VIDEO_FPS-based sync
-TIME_LIST_PATH = r"D:\Thesis\WiFi-3D-Human-Pose-Estimation\Data Preprocessing\Test GT\skeleton_viewer\Video demo\S11_02\time_list.txt"
+TIME_LIST_PATH = r"D:\Thesis\WiFi-3D-Human-Pose-Estimation\Data Preprocessing\Test GT\skeleton_viewer\Video demo\S11_19\time_list.txt"
 
 # Video source FPS — used ONLY if TIME_LIST_PATH is empty
 # Confirmed 15fps from ffmpeg (Azure Kinect color stream)
