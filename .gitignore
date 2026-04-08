@@ -2,6 +2,7 @@ __pycache__/
 # data
 Data/Person-in-WiFi-3D/test_data
 Data/Person-in-WiFi-3D/train_data
+Data Preprocessing/Test GT/skeleton_viewer/Video demo
 # feature
 features/
 # logs
