@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MMFi — GT Skeleton Viewer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #08080f;
+      color: #e0e0e0;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ─── Header ─────────────────────────────────────────── */
+    header {
+      background: linear-gradient(135deg, #0d0d1a 0%, #151530 100%);
+      padding: 9px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(100, 100, 255, .15);
+      flex-shrink: 0;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-size: 15px;
+      font-weight: 600;
+      white-space: nowrap;
+      background: linear-gradient(135deg, #7c7cff, #ff6ec7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    #file-info {
+      font-size: 11px;
+      color: #666;
+      font-weight: 300;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ─── Main layout ────────────────────────────────────── */
+    main {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+    }
+
+    /* ─── Left sidebar: file browser ─────────────────────── */
+    #sidebar {
+      width: 220px;
+      min-width: 180px;
+      background: #0a0a16;
+      border-right: 1px solid rgba(100, 100, 255, .12);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    #sidebar-header {
+      padding: 10px 14px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #7c7cff;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      border-bottom: 1px solid rgba(100, 100, 255, .1);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 14px;
+      font-size: 11px;
+      color: #555;
+      border-bottom: 1px solid rgba(100, 100, 255, .07);
+      flex-shrink: 0;
+    }
+
+    .bc-item {
+      cursor: pointer;
+      color: #7c7cff;
+      transition: color .15s;
+    }
+
+    .bc-item:hover {
+      color: #fff;
+    }
+
+    .bc-sep {
+      color: #333;
+    }
+
+    #file-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px 0;
+    }
+
+    #file-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    #file-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    #file-list::-webkit-scrollbar-thumb {
+      background: rgba(120, 120, 255, .2);
+      border-radius: 2px;
+    }
+
+    .fl-item {
+      padding: 7px 14px;
+      font-size: 12px;
+      cursor: pointer;
+      color: #aaa;
+      border-radius: 0;
+      transition: background .12s, color .12s;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .fl-item:hover {
+      background: rgba(120, 120, 255, .1);
+      color: #fff;
+    }
+
+    .fl-item.active {
+      background: rgba(120, 120, 255, .18);
+      color: #ccc;
+    }
+
+    .fl-item .fl-icon {
+      font-size: 13px;
+      opacity: .7;
+    }
+
+    #sidebar-status {
+      padding: 8px 14px;
+      font-size: 11px;
+      color: #555;
+      border-top: 1px solid rgba(100, 100, 255, .07);
+      flex-shrink: 0;
+    }
+
+    /* ─── Video panel ────────────────────────────────────── */
+    #video-panel {
+      width: 320px;
+      background: #09090f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      border-right: 1px solid rgba(100, 100, 255, .1);
+      flex-shrink: 0;
+    }
+
+    #video-panel video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .placeholder {
+      text-align: center;
+      padding: 40px;
+      opacity: .35;
+    }
+
+    .placeholder svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 12px;
+      opacity: .4;
+    }
+
+    .placeholder p {
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    /* ─── 3D canvas panel ────────────────────────────────── */
+    #skeleton-panel {
+      flex: 1;
+      position: relative;
+    }
+
+    #skeleton-panel canvas {
+      display: block;
+    }
+
+    /* ─── Controls ───────────────────────────────────────── */
+    #controls {
+      background: linear-gradient(135deg, #0d0d1a, #151530);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-top: 1px solid rgba(100, 100, 255, .15);
+      flex-shrink: 0;
+    }
+
+    .ctrl-btn {
+      background: rgba(120, 120, 255, .12);
+      border: 1px solid rgba(120, 120, 255, .2);
+      color: #aaa;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .2s;
+      flex-shrink: 0;
+    }
+
+    .ctrl-btn:hover {
+      background: rgba(120, 120, 255, .25);
+      color: #fff;
+      border-color: rgba(120, 120, 255, .4);
+    }
+
+    .ctrl-btn.active {
+      background: rgba(255, 110, 199, .2);
+      border-color: rgba(255, 110, 199, .4);
+      color: #ff6ec7;
+    }
+
+    #frame-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255, 255, 255, .08);
+      outline: none;
+      cursor: pointer;
+    }
+
+    #frame-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7c7cff, #ff6ec7);
+      cursor: pointer;
+    }
+
+    #frame-counter {
+      font-size: 12px;
+      color: #888;
+      min-width: 80px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    select {
+      background: #12121f;
+      border: 1px solid rgba(100, 100, 255, .2);
+      color: #aaa;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    /* ─── Legend overlay ─────────────────────────────────── */
+    #legend {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      background: rgba(8, 8, 20, .88);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(100, 100, 255, .15);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 11px;
+      z-index: 10;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 3px;
+    }
+
+    .legend-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ─── Loading overlay ────────────────────────────────── */
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: #08080f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 100;
+      transition: opacity .5s;
+    }
+
+    #loading.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(120, 120, 255, .15);
+      border-top-color: #7c7cff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    #loading-msg {
+      font-size: 13px;
+      color: #666;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ─── Toast ──────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(120, 120, 255, .9);
+      color: #fff;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s;
+      z-index: 200;
+    }
+
+    #toast.show {
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="loading">
+    <div class="spinner"></div>
+    <div id="loading-msg">Loading skeleton data…</div>
+  </div>
+
+  <header>
+    <h1>🦴 MMFi — GT Skeleton Viewer</h1>
+    <span id="file-info">Loading…</span>
+  </header>
+
+  <main>
+    <!-- ── Sidebar: file browser ──────────────────────── -->
+    <div id="sidebar">
+      <div id="sidebar-header">📂 Dataset Browser</div>
+      <div id="breadcrumb"><span class="bc-item" data-level="root">Root</span></div>
+      <div id="file-list">
+        <div style="padding:12px 14px;font-size:11px;color:#555">Loading…</div>
+      </div>
+      <div id="sidebar-status">MMFi Dataset</div>
+    </div>
+
+    <!-- ── Video panel ───────────────────────────────── -->
+    <div id="video-panel">
+      <div class="placeholder" id="video-placeholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="2" y="4" width="20" height="16" rx="2" />
+          <polygon points="10,8 16,12 10,16" />
+        </svg>
+        <p>No video<br>for this action</p>
+      </div>
+      <video id="video-player" style="display:none" controls></video>
+    </div>
+
+    <!-- ── 3-D skeleton canvas ───────────────────────── -->
+    <div id="skeleton-panel">
+      <div id="legend"></div>
+    </div>
+  </main>
+
+  <div id="controls">
+    <button class="ctrl-btn" id="prev-btn" title="Previous frame (←)">◀</button>
+    <button class="ctrl-btn" id="play-btn" title="Play / Pause (Space)">▶</button>
+    <button class="ctrl-btn" id="next-btn" title="Next frame (→)">▶</button>
+    <input type="range" id="frame-slider" min="0" max="0" value="0">
+    <span id="frame-counter">0 / 0</span>
+    <select id="fps-select" title="Playback FPS">
+      <option value="auto" selected>Auto FPS</option>
+      <option value="5">5 FPS</option>
+      <option value="10">10 FPS</option>
+      <option value="15">15 FPS</option>
+      <option value="30">30 FPS</option>
+    </select>
+    <button class="ctrl-btn" id="label-btn" title="Toggle joint labels">A</button>
+    <button class="ctrl-btn" id="reset-cam-btn" title="Reset camera">⟳</button>
+  </div>
+
+  <div id="toast"></div>
+
+  <script type="importmap">
+  {"imports":{"three":"https://unpkg.com/three@0.162.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.162.0/examples/jsm/"}}
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+    // ── State ─────────────────────────────────────────────────
+    let CFG = null, appData = null;
+    let currentFrame = 0, isPlaying = false, playInterval = null;
+    let showLabels = false, autoFps = 10;
+
+    // Breadcrumb state
+    let bcEnv = null, bcSubject = null;
+
+    // ── Three.js setup ─────────────────────────────────────────
+    const container = document.getElementById('skeleton-panel');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x08080f);
+    const camera = new THREE.PerspectiveCamera(55, 1, 0.01, 200);
+    camera.position.set(0, 1.5, 5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
+
+    const labelRenderer = new CSS2DRenderer();
+    labelRenderer.domElement.style.position = 'absolute';
+    labelRenderer.domElement.style.top = '0';
+    labelRenderer.domElement.style.pointerEvents = 'none';
+    container.appendChild(labelRenderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.minDistance = 0.2;
+    controls.maxDistance = 30;
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    dirLight.position.set(3, 5, 3);
+    scene.add(dirLight);
+
+    const grid = new THREE.GridHelper(8, 40, 0x1a1a2e, 0x111120);
+    scene.add(grid);
+    const axesHelper = new THREE.AxesHelper(0.4);
+    scene.add(axesHelper);
+
+    let personGroups = [];
+
+    function hexColor(s) { return new THREE.Color(parseInt(s.replace('#', '0x'))); }
+
+    function clearPersonGroups() {
+      for (const pg of personGroups) scene.remove(pg.group);
+      personGroups = [];
+    }
+
+    function createPersonSkeleton(personIdx) {
+      const group = new THREE.Group();
+      const hue = [0, 0.3, 0.6, 0.15, 0.45, 0.75][personIdx % 6];
+      const joints = [], labels = [], bones = [];
+
+      for (let i = 0; i < CFG.keypoint_names.length; i++) {
+        const c = hexColor(CFG.joint_colors[i]);
+        if (personIdx > 0) c.offsetHSL(hue, 0, 0);
+        const mat = new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.4, roughness: 0.3, metalness: 0.2 });
+        const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.022, 12, 12), mat);
+        group.add(mesh);
+        joints.push(mesh);
+
+        const div = document.createElement('div');
+        div.style.cssText = 'color:#fff;font-size:9px;background:rgba(0,0,0,.6);padding:1px 4px;border-radius:3px;white-space:nowrap;pointer-events:none';
+        div.textContent = CFG.keypoint_names[i];
+        const lbl = new CSS2DObject(div);
+        lbl.position.set(0, 0.035, 0);
+        mesh.add(lbl);
+        lbl.visible = showLabels;
+        labels.push(lbl);
+      }
+
+      for (let i = 0; i < CFG.edges.length; i++) {
+        const c = hexColor(CFG.edge_colors[i]);
+        if (personIdx > 0) c.offsetHSL(hue, 0, 0);
+        const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+        const mat = new THREE.LineBasicMaterial({ color: c, linewidth: 2 });
+        const ln = new THREE.Line(geo, mat);
+        group.add(ln);
+        bones.push(ln);
+      }
+
+      scene.add(group);
+      return { group, joints, bones, labels };
+    }
+
+    // ── Coordinate mapping ─────────────────────────────────────
+    // MMFi ground_truth.npy:  X = right, Y = up, Z = away from camera (depth ≈ 3m)
+    // Three.js world:         X = right, Y = up, Z = toward camera
+    // ⇒ flip Z (and optionally center depth so scene is near origin)
+    let depthOffset = 0;
+
+    function toThree(kpt) {
+      // x stays, y stays, z flipped (depth → negative Z in Three.js)
+      return [kpt[0], -kpt[1], -(kpt[2] - depthOffset)];
+    }
+
+    function computeDepthOffset(data) {
+      // Average Z of first frame, all persons, all joints
+      let sum = 0, n = 0;
+      for (const person of data.frames[0]) {
+        for (const kpt of person) { sum += kpt[2]; n++; }
+      }
+      return sum / n;
+    }
+
+    function updatePose(frameData) {
+      const numPersons = frameData.length;
+      while (personGroups.length < numPersons) personGroups.push(createPersonSkeleton(personGroups.length));
+      for (let p = 0; p < personGroups.length; p++) personGroups[p].group.visible = (p < numPersons);
+
+      for (let p = 0; p < numPersons; p++) {
+        const kpts = frameData[p];
+        const pg = personGroups[p];
+        for (let i = 0; i < CFG.keypoint_names.length; i++) {
+          const [tx, ty, tz] = toThree(kpts[i]);
+          pg.joints[i].position.set(tx, ty, tz);
+        }
+        for (let i = 0; i < CFG.edges.length; i++) {
+          const [a, b] = CFG.edges[i];
+          const pos = pg.bones[i].geometry.attributes.position.array;
+          const [ax, ay, az] = toThree(kpts[a]);
+          const [bx, by, bz] = toThree(kpts[b]);
+          pos[0] = ax; pos[1] = ay; pos[2] = az;
+          pos[3] = bx; pos[4] = by; pos[5] = bz;
+          pg.bones[i].geometry.attributes.position.needsUpdate = true;
+        }
+      }
+    }
+
+    function fitCamera() {
+      if (!appData || !appData.frames.length) return;
+      let cx = 0, cy = 0, cz = 0, n = 0;
+      for (const person of appData.frames[0]) {
+        for (const kpt of person) {
+          const [tx, ty, tz] = toThree(kpt);
+          cx += tx; cy += ty; cz += tz; n++;
+        }
+      }
+      cx /= n; cy /= n; cz /= n;
+      controls.target.set(cx, cy, cz);
+      camera.position.set(cx + 1.5, cy + 1.5, cz + 3);
+      grid.position.set(cx, cy - 1.0, cz);
+      axesHelper.position.set(cx - 3.5, cy - 1.0, cz + 3.5); // Move axes to grid corner
+      controls.update();
+    }
+
+    function onResize() {
+      const w = container.clientWidth, h = container.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+      labelRenderer.setSize(w, h);
+    }
+    window.addEventListener('resize', onResize);
+
+    (function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+      labelRenderer.render(scene, camera);
+    })();
+
+    // ── UI refs ────────────────────────────────────────────────
+    const slider = document.getElementById('frame-slider');
+    const counter = document.getElementById('frame-counter');
+    const playBtn = document.getElementById('play-btn');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const fpsSelect = document.getElementById('fps-select');
+    const labelBtn = document.getElementById('label-btn');
+    const resetBtn = document.getElementById('reset-cam-btn');
+    const video = document.getElementById('video-player');
+    const legendEl = document.getElementById('legend');
+    const fileInfo = document.getElementById('file-info');
+    const toastEl = document.getElementById('toast');
+
+    function showToast(msg, ms = 2000) {
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      setTimeout(() => toastEl.classList.remove('show'), ms);
+    }
+
+    function goToFrame(idx) {
+      if (!appData) return;
+      currentFrame = Math.max(0, Math.min(idx, appData.num_frames - 1));
+      slider.value = currentFrame;
+      counter.textContent = `${currentFrame + 1} / ${appData.num_frames}`;
+      fileInfo.textContent = appData.frame_names[currentFrame] || '';
+      updatePose(appData.frames[currentFrame]);
+      if (appData.has_video && video.duration) {
+        video.currentTime = currentFrame / (CFG.video_fps || 10);
+      }
+    }
+
+    slider.addEventListener('input', () => goToFrame(parseInt(slider.value)));
+    prevBtn.addEventListener('click', () => { stopPlay(); goToFrame(currentFrame - 1); });
+    nextBtn.addEventListener('click', () => { stopPlay(); goToFrame(currentFrame + 1); });
+    resetBtn.addEventListener('click', fitCamera);
+
+    function togglePlay() {
+      if (isPlaying) { stopPlay(); return; }
+      isPlaying = true;
+      playBtn.textContent = '⏸';
+      playBtn.classList.add('active');
+      const fps = fpsSelect.value === 'auto' ? autoFps : parseInt(fpsSelect.value);
+      playInterval = setInterval(() => {
+        if (currentFrame >= appData.num_frames - 1) { goToFrame(0); return; }
+        goToFrame(currentFrame + 1);
+      }, 1000 / fps);
+    }
+    function stopPlay() {
+      isPlaying = false;
+      playBtn.textContent = '▶';
+      playBtn.classList.remove('active');
+      if (playInterval) clearInterval(playInterval);
+      playInterval = null;
+    }
+    playBtn.addEventListener('click', togglePlay);
+    fpsSelect.addEventListener('change', () => { if (isPlaying) { stopPlay(); togglePlay(); } });
+
+    labelBtn.addEventListener('click', () => {
+      showLabels = !showLabels;
+      labelBtn.classList.toggle('active', showLabels);
+      for (const pg of personGroups) for (const lbl of pg.labels) lbl.visible = showLabels;
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft') { stopPlay(); goToFrame(currentFrame - 1); }
+      else if (e.key === 'ArrowRight') { stopPlay(); goToFrame(currentFrame + 1); }
+      else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+    });
+
+    // ── Data loading ───────────────────────────────────────────
+    // Always pass timestamp to prevent browser cache
+    function nocache(url) {
+      return url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now();
+    }
+
+    function applyData(data) {
+      stopPlay();
+      appData = data;
+      depthOffset = computeDepthOffset(data);
+
+      // Rebuild person groups from scratch (new file may have different layout)
+      clearPersonGroups();
+
+      slider.max = data.num_frames - 1;
+      slider.value = 0;
+
+      if (data.has_video) {
+        document.getElementById('video-placeholder').style.display = 'none';
+        video.style.display = 'block';
+        video.src = nocache('/video');
+      } else {
+        document.getElementById('video-placeholder').style.display = '';
+        video.style.display = 'none';
+        video.src = '';
+      }
+
+      // Auto-FPS from frame names
+      if (data.frame_names.length >= 2) {
+        const nums = data.frame_names
+          .map(n => { const m = n.match(/\d+$/); return m ? parseInt(m[0]) : 0; })
+          .filter(x => x > 0);
+        if (nums.length >= 2) {
+          const span = nums[nums.length - 1] - nums[0];
+          if (span > 0) autoFps = Math.max(1, Math.round(nums.length / (span / (CFG.video_fps || 10)) * 10) / 10);
+        }
+      }
+      fpsSelect.options[0].textContent = `Auto (${autoFps} fps)`;
+
+      onResize();
+      goToFrame(0);
+      fitCamera();
+    }
+
+    async function loadNpy(npyPath) {
+      document.getElementById('loading-msg').textContent = 'Loading…';
+      document.getElementById('loading').classList.remove('hidden');
+      try {
+        const url = nocache('/api/reload?path=' + encodeURIComponent(npyPath));
+        const res = await fetch(url);
+        const obj = await res.json();
+        if (!res.ok) throw new Error(obj.error || res.statusText);
+
+        const dataRes = await fetch(nocache('/api/data'));
+        const data = await dataRes.json();
+        applyData(data);
+        showToast(`✓ Loaded ${obj.num_frames} frames`);
+      } catch (e) {
+        showToast('❌ ' + e.message, 4000);
+      } finally {
+        document.getElementById('loading').classList.add('hidden');
+      }
+    }
+
+    // ── Sidebar / file browser ─────────────────────────────────
+    const breadcrumbEl = document.getElementById('breadcrumb');
+    const fileListEl = document.getElementById('file-list');
+    const sidebarStatus = document.getElementById('sidebar-status');
+
+    function renderBreadcrumb() {
+      let html = '<span class="bc-item" data-level="root">Root</span>';
+      if (bcEnv) {
+        html += '<span class="bc-sep"> / </span>';
+        html += `<span class="bc-item" data-level="env">${bcEnv}</span>`;
+      }
+      if (bcSubject) {
+        html += '<span class="bc-sep"> / </span>';
+        html += `<span class="bc-item" data-level="subject">${bcSubject}</span>`;
+      }
+      breadcrumbEl.innerHTML = html;
+      breadcrumbEl.querySelectorAll('.bc-item').forEach(el => {
+        el.addEventListener('click', () => {
+          const lv = el.dataset.level;
+          if (lv === 'root') { bcEnv = null; bcSubject = null; browseTo(); }
+          else if (lv === 'env') { bcSubject = null; browseTo(bcEnv); }
+        });
+      });
+    }
+
+    async function browseTo(env, subject) {
+      fileListEl.innerHTML = '<div style="padding:12px 14px;font-size:11px;color:#555">Loading…</div>';
+      let url = nocache('/api/browse');
+      if (env) url += `?env=${encodeURIComponent(env)}`;
+      if (subject) url += `&subject=${encodeURIComponent(subject)}`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        const items = data.items;
+        const level = data.level;
+        fileListEl.innerHTML = '';
+
+        if (!items.length) {
+          fileListEl.innerHTML = '<div style="padding:12px 14px;font-size:11px;color:#555">No items found</div>';
+          return;
+        }
+
+        items.forEach(name => {
+          const div = document.createElement('div');
+          div.className = 'fl-item';
+          const icon = level === 'action' ? '📄' : '📁';
+          div.innerHTML = `<span class="fl-icon">${icon}</span>${name}`;
+          div.addEventListener('click', () => {
+            if (level === 'env') {
+              bcEnv = name; bcSubject = null;
+              browseTo(name);
+            } else if (level === 'subject') {
+              bcSubject = name;
+              browseTo(bcEnv, name);
+            } else if (level === 'action') {
+              // Build path and load
+              const path = `D:\\MMFi-dataset\\MMFi_Dataset\\${bcEnv}\\${bcSubject}\\${name}\\ground_truth.npy`;
+              // Mark active
+              fileListEl.querySelectorAll('.fl-item').forEach(x => x.classList.remove('active'));
+              div.classList.add('active');
+              sidebarStatus.textContent = `${bcEnv}/${bcSubject}/${name}`;
+              loadNpy(path);
+            }
+          });
+          fileListEl.appendChild(div);
+        });
+
+        renderBreadcrumb();
+      } catch (e) {
+        fileListEl.innerHTML = `<div style="padding:12px 14px;font-size:11px;color:#f44">Error: ${e.message}</div>`;
+      }
+    }
+
+    // ── Boot ───────────────────────────────────────────────────
+    document.getElementById('loading-msg').textContent = 'Fetching config…';
+
+    fetch(nocache('/api/config'))
+      .then(r => r.json())
+      .then(cfg => {
+        CFG = cfg;
+        legendEl.innerHTML = CFG.legend
+          .map(it => `<div class="legend-item"><div class="legend-dot" style="background:${it.color}"></div>${it.label}</div>`)
+          .join('');
+        return fetch(nocache('/api/data'));
+      })
+      .then(r => r.json())
+      .then(data => {
+        applyData(data);
+        // Start sidebar at env level
+        browseTo();
+        document.getElementById('loading').classList.add('hidden');
+      })
+      .catch(err => {
+        console.error(err);
+        document.getElementById('loading').innerHTML =
+          '<p style="color:#f44;text-align:center">Failed to load data.<br>Is the server running?</p>';
+      });
+  </script>
+</body>
+
+</html>
