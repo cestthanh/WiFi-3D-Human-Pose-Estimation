@@ -1,0 +1,41 @@
+# =====================================================
+# Config S2: Cross-Subject Split
+# Mục đích: Kiểm tra khả năng generalize qua người mới
+# Train: 32 subjects, Val: 8 subjects chưa thấy
+# =====================================================
+
+modality: wifi-csi
+protocol: protocol3
+data_unit: frame
+
+split_to_use: cross_subject_split
+
+cross_subject_split:
+  train_dataset:
+    split: training
+    scenes: None
+    subjects: [S01,S02,S03,S04,S06,S07,S08,S09,S11,S12,S13,S14,
+               S16,S17,S18,S19,S21,S22,S23,S24,S26,S27,S28,S29,
+               S31,S32,S33,S34,S36,S37,S38,S39]
+    actions: all
+  val_dataset:
+    split: validation
+    scenes: None
+    subjects: [S05, S10, S15, S20, S25, S30, S35, S40]
+    actions: all
+
+init_rand_seed: 42
+train_loader:
+  batch_size: 32
+  num_workers: 4
+val_loader:
+  batch_size: 16
+  num_workers: 4
+test_loader:
+  batch_size: 1
+  num_workers: 0
+
+# Training hyperparameters
+epoch: 100
+learning_rate: 0.001
+checkpoint: ./checkpoints/s2_cross_subject/

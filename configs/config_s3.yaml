@@ -1,0 +1,40 @@
+# =====================================================
+# Config S3: Cross-Environment Split ← TRỌNG TÂM THESIS
+# Mục đích: Chứng minh cross-domain degradation
+# Train: E01+E02+E03 (labeled), Val/Test: E04 (unseen env)
+# Kỳ vọng: MPJPE tăng đáng kể so với S1 (domain gap)
+# =====================================================
+
+modality: wifi-csi
+protocol: protocol3
+data_unit: frame
+
+split_to_use: cross_scene_split
+
+cross_scene_split:
+  train_dataset:
+    split: training
+    scenes: [E01, E02, E03]
+    subjects: None
+    actions: all
+  val_dataset:
+    split: validation
+    scenes: [E04]
+    subjects: None
+    actions: all
+
+init_rand_seed: 42
+train_loader:
+  batch_size: 32
+  num_workers: 4
+val_loader:
+  batch_size: 16
+  num_workers: 4
+test_loader:
+  batch_size: 1
+  num_workers: 0
+
+# Training hyperparameters
+epoch: 100
+learning_rate: 0.001
+checkpoint: ./checkpoints/s3_cross_env/

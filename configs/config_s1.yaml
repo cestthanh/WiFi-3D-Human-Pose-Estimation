@@ -1,0 +1,41 @@
+# =====================================================
+# Config S1: Random Split (Baseline — cùng môi trường)
+# Mục đích: Đo hiệu suất tốt nhất của model
+# Train: 70% ngẫu nhiên, Val: 30% còn lại
+# =====================================================
+
+modality: wifi-csi
+protocol: protocol3
+data_unit: frame
+
+split_to_use: random_split
+
+random_split:
+  ratio: 0.7
+  random_seed: 42
+  train_dataset:
+    split: training
+    scenes: None
+    subjects: None
+    actions: all
+  val_dataset:
+    split: validation
+    scenes: None
+    subjects: None
+    actions: all
+
+init_rand_seed: 42
+train_loader:
+  batch_size: 32
+  num_workers: 4
+val_loader:
+  batch_size: 16
+  num_workers: 4
+test_loader:
+  batch_size: 1
+  num_workers: 0
+
+# Training hyperparameters
+epoch: 100
+learning_rate: 0.001
+checkpoint: ./checkpoints/s1_baseline/
