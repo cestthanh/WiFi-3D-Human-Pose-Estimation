@@ -47,10 +47,22 @@ def decode_config(config):
                         val_form[subject] = [action]
             rs += 1
     elif config['split_to_use'] == 'cross_scene_split':
-        subjects_train = ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S07', 'S08', 'S09', 'S10',
-                          'S11', 'S12', 'S13', 'S14', 'S15', 'S16', 'S17', 'S18', 'S19', 'S20',
-                          'S21', 'S22', 'S23', 'S24', 'S25', 'S26', 'S27', 'S28', 'S29', 'S30']
-        subjects_val = ['S31', 'S32', 'S33', 'S34', 'S35', 'S36', 'S37', 'S38', 'S39', 'S40']
+        # Bảng map Environment → Subjects (cố định theo MMFi dataset)
+        scene_to_subjects = {
+            'E01': ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S07', 'S08', 'S09', 'S10'],
+            'E02': ['S11', 'S12', 'S13', 'S14', 'S15', 'S16', 'S17', 'S18', 'S19', 'S20'],
+            'E03': ['S21', 'S22', 'S23', 'S24', 'S25', 'S26', 'S27', 'S28', 'S29', 'S30'],
+            'E04': ['S31', 'S32', 'S33', 'S34', 'S35', 'S36', 'S37', 'S38', 'S39', 'S40'],
+        }
+        # Đọc scenes từ config YAML thay vì hardcode
+        train_scenes = config['cross_scene_split']['train_dataset']['scenes']
+        val_scenes   = config['cross_scene_split']['val_dataset']['scenes']
+        subjects_train = []
+        for sc in train_scenes:
+            subjects_train.extend(scene_to_subjects[sc])
+        subjects_val = []
+        for sc in val_scenes:
+            subjects_val.extend(scene_to_subjects[sc])
         for subject in subjects_train:
             train_form[subject] = actions
         for subject in subjects_val:
