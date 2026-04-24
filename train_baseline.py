@@ -87,7 +87,7 @@ def main():
     print(f"==> Thiết bị: {device}")
 
     # Load config
-    with open(args.config, "r") as f:
+    with open(args.config, "r", encoding="utf-8") as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
     print(f"==> Đã load config: {args.config}")
     print(f"    Split: {config.get('split_to_use', '?')}")
