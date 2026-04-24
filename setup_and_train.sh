@@ -30,14 +30,13 @@ fi
 echo "[2/4] Cài Python dependencies..."
 pip install -q -r "$PROJECT_DIR/requirements.txt"
 
-# ---- 3. Tải dataset ----
+# ---- 3. Dataset ----
 if [ ! -d "$DATASET_DIR" ]; then
-    echo "[3/4] Tải MMFi_Lite từ Google Drive..."
-    pip install -q gdown
-    gdown --folder "$DATASET_FOLDER_ID" -O "$DATASET_DIR"
-    echo "     Dataset đã tải xong tại: $DATASET_DIR"
+    echo "[3/4] ❌ Lỗi: Chưa tìm thấy dataset tại $DATASET_DIR."
+    echo "       Vui lòng unzip file dataset bạn upload qua scp ra đây trước."
+    exit 1
 else
-    echo "[3/4] Dataset đã có tại: $DATASET_DIR"
+    echo "[3/4] ✅ Đã tìm thấy dataset tại: $DATASET_DIR"
 fi
 
 # Kiểm tra dataset
