@@ -13,4 +13,4 @@ plot
 pose_weights
 pretrain_weights
 # others
-visualization/
+results/
