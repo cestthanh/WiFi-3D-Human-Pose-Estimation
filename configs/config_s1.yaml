@@ -26,11 +26,11 @@ random_split:
 
 init_rand_seed: 42
 train_loader:
-  batch_size: 32
-  num_workers: 4
+  batch_size: 128
+  num_workers: 8
 val_loader:
-  batch_size: 16
-  num_workers: 4
+  batch_size: 64
+  num_workers: 8
 test_loader:
   batch_size: 1
   num_workers: 0
