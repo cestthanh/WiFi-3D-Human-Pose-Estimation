@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MMFi — GT Skeleton + CSI Viewer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #08080f;
+      color: #e0e0e0;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column
+    }
+
+    /* Header */
+    header {
+      background: linear-gradient(135deg, #0d0d1a, #151530);
+      padding: 8px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(100, 100, 255, .15);
+      flex-shrink: 0;
+      gap: 12px
+    }
+
+    header h1 {
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      background: linear-gradient(135deg, #7c7cff, #ff6ec7);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent
+    }
+
+    #file-info {
+      font-size: 11px;
+      color: #666;
+      font-weight: 300;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap
+    }
+
+    /* Top row: RGB + skeleton */
+    #top-row {
+      display: flex;
+      flex: 1;
+      min-height: 0
+    }
+
+    #rgb-panel {
+      width: 380px;
+      background: #09090f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      border-right: 1px solid rgba(100, 100, 255, .1);
+      flex-shrink: 0
+    }
+
+    #rgb-image {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain
+    }
+
+    .placeholder {
+      text-align: center;
+      padding: 30px;
+      opacity: .35
+    }
+
+    .placeholder svg {
+      width: 40px;
+      height: 40px;
+      margin-bottom: 10px;
+      opacity: .4
+    }
+
+    .placeholder p {
+      font-size: 11px;
+      line-height: 1.6
+    }
+
+    #skeleton-panel {
+      flex: 1;
+      position: relative
+    }
+
+    #skeleton-panel canvas {
+      display: block
+    }
+
+    #legend {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      background: rgba(8, 8, 20, .88);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(100, 100, 255, .15);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 10px;
+      z-index: 10
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 2px
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0
+    }
+
+    /* Bottom row: CSI panels */
+    #csi-row {
+      height: 260px;
+      display: flex;
+      flex-direction: column;
+      border-top: 1px solid rgba(100, 100, 255, .15);
+      flex-shrink: 0;
+      background: #0a0a14
+    }
+
+    #csi-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 16px;
+      border-bottom: 1px solid rgba(100, 100, 255, .08);
+      flex-shrink: 0
+    }
+
+    #csi-header span {
+      font-size: 11px;
+      font-weight: 600;
+      color: #7c7cff;
+      letter-spacing: .04em
+    }
+
+    #antenna-select {
+      background: #12121f;
+      border: 1px solid rgba(100, 100, 255, .2);
+      color: #aaa;
+      padding: 3px 6px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-family: inherit
+    }
+
+    #csi-panels {
+      display: flex;
+      flex: 1;
+      min-height: 0
+    }
+
+    /* Line chart */
+    #linechart-wrap {
+      flex: 1;
+      position: relative;
+      border-right: 1px solid rgba(100, 100, 255, .08)
+    }
+
+    #linechart-wrap canvas {
+      width: 100%;
+      height: 100%;
+      display: block
+    }
+
+    .chart-label {
+      position: absolute;
+      font-size: 9px;
+      color: #555;
+      pointer-events: none
+    }
+
+    #lc-ylabel {
+      top: 4px;
+      left: 6px
+    }
+
+    #lc-xlabel {
+      bottom: 2px;
+      right: 8px
+    }
+
+    #lc-title {
+      top: 4px;
+      right: 8px;
+      color: #7c7cff;
+      font-weight: 500
+    }
+
+    /* Heatmap */
+    #heatmap-wrap {
+      flex: 1.2;
+      position: relative
+    }
+
+    #heatmap-wrap canvas {
+      width: 100%;
+      height: 100%;
+      display: block
+    }
+
+    #hm-title {
+      position: absolute;
+      top: 4px;
+      right: 8px;
+      font-size: 9px;
+      color: #7c7cff;
+      font-weight: 500;
+      pointer-events: none
+    }
+
+    #hm-ylabel {
+      position: absolute;
+      top: 4px;
+      left: 6px;
+      font-size: 9px;
+      color: #555;
+      pointer-events: none
+    }
+
+    #hm-xlabel {
+      position: absolute;
+      bottom: 2px;
+      right: 8px;
+      font-size: 9px;
+      color: #555;
+      pointer-events: none
+    }
+
+    #scrubber {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: rgba(255, 80, 80, .9);
+      pointer-events: none;
+      z-index: 5;
+      box-shadow: 0 0 6px rgba(255, 0, 0, .5)
+    }
+
+    /* Controls */
+    #controls {
+      background: linear-gradient(135deg, #0d0d1a, #151530);
+      padding: 8px 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-top: 1px solid rgba(100, 100, 255, .15);
+      flex-shrink: 0
+    }
+
+    .ctrl-btn {
+      background: rgba(120, 120, 255, .12);
+      border: 1px solid rgba(120, 120, 255, .2);
+      color: #aaa;
+      width: 32px;
+      height: 32px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .2s;
+      flex-shrink: 0
+    }
+
+    .ctrl-btn:hover {
+      background: rgba(120, 120, 255, .25);
+      color: #fff;
+      border-color: rgba(120, 120, 255, .4)
+    }
+
+    .ctrl-btn.active {
+      background: rgba(255, 110, 199, .2);
+      border-color: rgba(255, 110, 199, .4);
+      color: #ff6ec7
+    }
+
+    #frame-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255, 255, 255, .08);
+      outline: none;
+      cursor: pointer
+    }
+
+    #frame-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7c7cff, #ff6ec7);
+      cursor: pointer
+    }
+
+    #frame-counter {
+      font-size: 11px;
+      color: #888;
+      min-width: 75px;
+      text-align: center;
+      font-variant-numeric: tabular-nums
+    }
+
+    select {
+      background: #12121f;
+      border: 1px solid rgba(100, 100, 255, .2);
+      color: #aaa;
+      padding: 4px 7px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer
+    }
+
+    /* Loading / toast */
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: #08080f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      z-index: 100;
+      transition: opacity .5s
+    }
+
+    #loading.hidden {
+      opacity: 0;
+      pointer-events: none
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(120, 120, 255, .15);
+      border-top-color: #7c7cff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite
+    }
+
+    #loading-msg {
+      font-size: 12px;
+      color: #666
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(120, 120, 255, .9);
+      color: #fff;
+      padding: 7px 16px;
+      border-radius: 18px;
+      font-size: 11px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s;
+      z-index: 200
+    }
+
+    #toast.show {
+      opacity: 1
+    }
+  </style>
+</head>
+
+<body>
+  <div id="loading">
+    <div class="spinner"></div>
+    <div id="loading-msg">Loading…</div>
+  </div>
+
+  <header>
+    <h1>🦴 MMFi — Skeleton + CSI Viewer</h1>
+    <span id="file-info">Loading…</span>
+  </header>
+
+  <!-- Top row: RGB + Skeleton -->
+  <div id="top-row">
+    <div id="rgb-panel">
+      <div class="placeholder" id="video-placeholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="2" y="4" width="20" height="16" rx="2" />
+          <polygon points="10,8 16,12 10,16" />
+        </svg>
+        <p>No RGB frame</p>
+      </div>
+      <img id="rgb-image" style="display:none" alt="RGB Frame" />
+    </div>
+    <div id="skeleton-panel">
+      <div id="legend"></div>
+    </div>
+  </div>
+
+  <!-- CSI row -->
+  <div id="csi-row">
+    <div id="csi-header">
+      <span>📡 WiFi-CSI Amplitude</span>
+      <div>
+        <select id="antenna-select" title="Antenna">
+          <option value="all" selected>All Antennas</option>
+          <option value="0">Antenna 1</option>
+          <option value="1">Antenna 2</option>
+          <option value="2">Antenna 3</option>
+        </select>
+      </div>
+    </div>
+    <div id="csi-panels">
+      <div id="linechart-wrap">
+        <canvas id="linechart-canvas"></canvas>
+        <span class="chart-label" id="lc-title">Per-Frame Amplitude</span>
+        <span class="chart-label" id="lc-ylabel">Amp (dB)</span>
+        <span class="chart-label" id="lc-xlabel">Subcarrier</span>
+      </div>
+      <div id="heatmap-wrap">
+        <canvas id="heatmap-canvas"></canvas>
+        <div id="scrubber"></div>
+        <span id="hm-title">Amplitude Heatmap</span>
+        <span id="hm-ylabel">Subcarrier</span>
+        <span id="hm-xlabel">Frame →</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div id="controls">
+    <button class="ctrl-btn" id="prev-btn" title="Previous (←)">◀</button>
+    <button class="ctrl-btn" id="play-btn" title="Play/Pause (Space)">▶</button>
+    <button class="ctrl-btn" id="next-btn" title="Next (→)">▶</button>
+    <input type="range" id="frame-slider" min="0" max="0" value="0">
+    <span id="frame-counter">0 / 0</span>
+    <select id="fps-select" title="Playback FPS">
+      <option value="auto" selected>Auto FPS</option>
+      <option value="5">5</option>
+      <option value="10">10</option>
+      <option value="15">15</option>
+      <option value="30">30</option>
+    </select>
+    <button class="ctrl-btn" id="label-btn" title="Labels">A</button>
+    <button class="ctrl-btn" id="reset-cam-btn" title="Reset cam">⟳</button>
+  </div>
+  <div id="toast"></div>
+
+  <script type="importmap">
+  {"imports":{"three":"https://unpkg.com/three@0.162.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.162.0/examples/jsm/"}}
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+    // ── State ──────────────────────────────────────────────
+    let CFG = null, appData = null, csiData = null;
+    let currentFrame = 0, isPlaying = false, playInterval = null;
+    let showLabels = false, autoFps = 10;
+    let selectedAntenna = 'all'; // 'all' | '0' | '1' | '2'
+
+    // ── Three.js ───────────────────────────────────────────
+    const container = document.getElementById('skeleton-panel');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x08080f);
+    const camera = new THREE.PerspectiveCamera(55, 1, 0.01, 200);
+    camera.position.set(0, 1.5, 5);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
+
+    const labelRenderer = new CSS2DRenderer();
+    labelRenderer.domElement.style.position = 'absolute';
+    labelRenderer.domElement.style.top = '0';
+    labelRenderer.domElement.style.pointerEvents = 'none';
+    container.appendChild(labelRenderer.domElement);
+
+    const orbitCtrl = new OrbitControls(camera, renderer.domElement);
+    orbitCtrl.enableDamping = true; orbitCtrl.dampingFactor = 0.08;
+    orbitCtrl.minDistance = 0.2; orbitCtrl.maxDistance = 30;
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    dirLight.position.set(3, 5, 3); scene.add(dirLight);
+    const grid = new THREE.GridHelper(8, 40, 0x1a1a2e, 0x111120); scene.add(grid);
+    const axesHelper = new THREE.AxesHelper(0.4); scene.add(axesHelper);
+
+    let personGroups = [];
+    function hexColor(s) { return new THREE.Color(parseInt(s.replace('#', '0x'))); }
+    function clearPersonGroups() { for (const pg of personGroups) scene.remove(pg.group); personGroups = []; }
+
+    function createPersonSkeleton(pIdx) {
+      const group = new THREE.Group();
+      const hue = [0, .3, .6, .15, .45, .75][pIdx % 6];
+      const joints = [], labels = [], bones = [];
+      for (let i = 0; i < CFG.keypoint_names.length; i++) {
+        const c = hexColor(CFG.joint_colors[i]); if (pIdx > 0) c.offsetHSL(hue, 0, 0);
+        const mat = new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: .4, roughness: .3, metalness: .2 });
+        const mesh = new THREE.Mesh(new THREE.SphereGeometry(.022, 12, 12), mat);
+        group.add(mesh); joints.push(mesh);
+        const div = document.createElement('div');
+        div.style.cssText = 'color:#fff;font-size:9px;background:rgba(0,0,0,.6);padding:1px 4px;border-radius:3px;white-space:nowrap;pointer-events:none';
+        div.textContent = CFG.keypoint_names[i];
+        const lbl = new CSS2DObject(div); lbl.position.set(0, .035, 0);
+        mesh.add(lbl); lbl.visible = showLabels; labels.push(lbl);
+      }
+      for (let i = 0; i < CFG.edges.length; i++) {
+        const c = hexColor(CFG.edge_colors[i]); if (pIdx > 0) c.offsetHSL(hue, 0, 0);
+        const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+        const mat = new THREE.LineBasicMaterial({ color: c, linewidth: 2 });
+        const ln = new THREE.Line(geo, mat); group.add(ln); bones.push(ln);
+      }
+      scene.add(group);
+      return { group, joints, bones, labels };
+    }
+
+    let depthOffset = 0;
+    function toThree(kpt) { return [kpt[0], -kpt[1], -(kpt[2] - depthOffset)]; }
+    function computeDepthOffset(data) { let s = 0, n = 0; for (const p of data.frames[0]) for (const k of p) { s += k[2]; n++; } return s / n; }
+
+    function updatePose(fd) {
+      const np = fd.length;
+      while (personGroups.length < np) personGroups.push(createPersonSkeleton(personGroups.length));
+      for (let p = 0; p < personGroups.length; p++) personGroups[p].group.visible = (p < np);
+      for (let p = 0; p < np; p++) {
+        const kpts = fd[p], pg = personGroups[p];
+        for (let i = 0; i < CFG.keypoint_names.length; i++) { const [tx, ty, tz] = toThree(kpts[i]); pg.joints[i].position.set(tx, ty, tz); }
+        for (let i = 0; i < CFG.edges.length; i++) {
+          const [a, b] = CFG.edges[i], pos = pg.bones[i].geometry.attributes.position.array;
+          const [ax, ay, az] = toThree(kpts[a]), [bx, by, bz] = toThree(kpts[b]);
+          pos[0] = ax; pos[1] = ay; pos[2] = az; pos[3] = bx; pos[4] = by; pos[5] = bz;
+          pg.bones[i].geometry.attributes.position.needsUpdate = true;
+        }
+      }
+    }
+
+    function fitCamera() {
+      if (!appData || !appData.frames.length) return;
+      let cx = 0, cy = 0, cz = 0, n = 0;
+      for (const p of appData.frames[0]) for (const k of p) { const [tx, ty, tz] = toThree(k); cx += tx; cy += ty; cz += tz; n++; }
+      cx /= n; cy /= n; cz /= n;
+      orbitCtrl.target.set(cx, cy, cz); camera.position.set(cx + 1.5, cy + 1.5, cz + 3);
+      grid.position.set(cx, cy - 1, cz); axesHelper.position.set(cx - 3.5, cy - 1, cz + 3.5);
+      orbitCtrl.update();
+    }
+
+    function onResize() {
+      const w = container.clientWidth, h = container.clientHeight;
+      camera.aspect = w / h; camera.updateProjectionMatrix();
+      renderer.setSize(w, h); labelRenderer.setSize(w, h);
+      drawHeatmap(); drawLineChart(currentFrame);
+    }
+    window.addEventListener('resize', onResize);
+
+    (function animate() { requestAnimationFrame(animate); orbitCtrl.update(); renderer.render(scene, camera); labelRenderer.render(scene, camera); })();
+
+    // ══════════════════════════════════════════════════════
+    //  CSI VISUALIZATION
+    // ══════════════════════════════════════════════════════
+    const ANT_COLORS = ['#FF6B6B', '#4ECDC4', '#FFD93D']; // red, teal, yellow
+    const lcCanvas = document.getElementById('linechart-canvas');
+    const lcCtx = lcCanvas.getContext('2d');
+    const hmCanvas = document.getElementById('heatmap-canvas');
+    const hmCtx = hmCanvas.getContext('2d');
+    const scrubber = document.getElementById('scrubber');
+
+    // ── Viridis-like colormap ──────────────────────────────
+    function viridis(t) {
+      // t in [0,1] → [r,g,b] 0-255
+      t = Math.max(0, Math.min(1, t));
+      const r = Math.round(Math.max(0, Math.min(255, 68 + t * (-68 + 253) + t * t * (-180))));
+      const g = Math.round(Math.max(0, Math.min(255, 1 + t * (180) + t * t * (-80))));
+      const b = Math.round(Math.max(0, Math.min(255, 84 + t * (60) + t * t * (-140))));
+      return `rgb(${r},${g},${b})`;
+    }
+
+    // Better inferno-like colormap
+    function inferno(t) {
+      t = Math.max(0, Math.min(1, t));
+      let r, g, b;
+      if (t < 0.25) {
+        const s = t / 0.25;
+        r = Math.round(10 + s * 50); g = Math.round(5 + s * 10); b = Math.round(30 + s * 80);
+      } else if (t < 0.5) {
+        const s = (t - 0.25) / 0.25;
+        r = Math.round(60 + s * 140); g = Math.round(15 + s * 20); b = Math.round(110 - s * 30);
+      } else if (t < 0.75) {
+        const s = (t - 0.5) / 0.25;
+        r = Math.round(200 + s * 45); g = Math.round(35 + s * 100); b = Math.round(80 - s * 60);
+      } else {
+        const s = (t - 0.75) / 0.25;
+        r = Math.round(245 + s * 10); g = Math.round(135 + s * 100); b = Math.round(20 + s * 30);
+      }
+      return `rgb(${Math.min(255, r)},${Math.min(255, g)},${Math.min(255, b)})`;
+    }
+
+    // ── Line chart: amplitude per subcarrier for current frame ──
+    function drawLineChart(frameIdx) {
+      if (!csiData) return;
+      const W = lcCanvas.parentElement.clientWidth;
+      const H = lcCanvas.parentElement.clientHeight - 20;
+      lcCanvas.width = W * devicePixelRatio;
+      lcCanvas.height = H * devicePixelRatio;
+      lcCanvas.style.width = W + 'px';
+      lcCanvas.style.height = H + 'px';
+      const ctx = lcCtx;
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+
+      const pad = { l: 36, r: 8, t: 18, b: 20 };
+      const cw = W - pad.l - pad.r;
+      const ch = H - pad.t - pad.b;
+      const nSub = csiData.num_subcarriers;
+      const ampMin = csiData.amp_min;
+      const ampMax = csiData.amp_max;
+      const range = ampMax - ampMin || 1;
+
+      // Grid lines
+      ctx.strokeStyle = 'rgba(255,255,255,.06)';
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i <= 4; i++) {
+        const y = pad.t + ch * (1 - i / 4);
+        ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + cw, y); ctx.stroke();
+        ctx.fillStyle = '#444'; ctx.font = '9px Inter';
+        ctx.fillText((ampMin + range * i / 4).toFixed(0), 2, y + 3);
+      }
+      // X axis ticks
+      for (let i = 0; i <= 4; i++) {
+        const x = pad.l + cw * i / 4;
+        ctx.fillStyle = '#444'; ctx.font = '9px Inter';
+        ctx.fillText(Math.round(nSub * i / 4), x - 6, H - 3);
+      }
+
+      const frame = csiData.heatmap[frameIdx]; // (3, 114)
+      if (!frame) return;
+
+      const antennas = selectedAntenna === 'all' ? [0, 1, 2] : [parseInt(selectedAntenna)];
+      for (const ant of antennas) {
+        const row = frame[ant]; // 114 values
+        ctx.strokeStyle = ANT_COLORS[ant];
+        ctx.lineWidth = selectedAntenna === 'all' ? 1.2 : 2;
+        ctx.globalAlpha = selectedAntenna === 'all' ? 0.85 : 1;
+        ctx.beginPath();
+        for (let s = 0; s < nSub; s++) {
+          const x = pad.l + (s / (nSub - 1)) * cw;
+          const y = pad.t + ch * (1 - (row[s] - ampMin) / range);
+          s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      // Antenna legend in chart
+      const antNames = ['Ant 1', 'Ant 2', 'Ant 3'];
+      for (const ant of antennas) {
+        ctx.fillStyle = ANT_COLORS[ant];
+        ctx.font = '9px Inter';
+        ctx.fillText(antNames[ant], pad.l + 5 + ant * 44, pad.t + 12);
+      }
+    }
+
+    // ── Heatmap: full sequence ─────────────────────────────
+    let hmImageData = null; // cached ImageData
+
+    function buildHeatmapImage(antIdx) {
+      if (!csiData) return;
+      const T = csiData.num_frames;
+      const S = csiData.num_subcarriers;
+      const ampMin = csiData.amp_min;
+      const range = (csiData.amp_max - csiData.amp_min) || 1;
+
+      // Create an offscreen canvas for the raw heatmap data
+      const imgData = new ImageData(T, S);
+      const d = imgData.data;
+
+      for (let f = 0; f < T; f++) {
+        for (let s = 0; s < S; s++) {
+          let val;
+          if (antIdx === 'all') {
+            val = (csiData.heatmap[f][0][s] + csiData.heatmap[f][1][s] + csiData.heatmap[f][2][s]) / 3;
+          } else {
+            val = csiData.heatmap[f][antIdx][s];
+          }
+          const t = (val - ampMin) / range;
+          // Parse inferno color
+          const col = inferno(t);
+          const m = col.match(/\d+/g);
+          const px = ((S - 1 - s) * T + f) * 4; // flip Y so subcarrier 0 is at bottom
+          d[px] = parseInt(m[0]);
+          d[px + 1] = parseInt(m[1]);
+          d[px + 2] = parseInt(m[2]);
+          d[px + 3] = 255;
+        }
+      }
+      hmImageData = imgData;
+    }
+
+    function drawHeatmap() {
+      if (!csiData || !hmImageData) return;
+      const W = hmCanvas.parentElement.clientWidth;
+      const H = hmCanvas.parentElement.clientHeight - 20;
+      hmCanvas.width = W * devicePixelRatio;
+      hmCanvas.height = H * devicePixelRatio;
+      hmCanvas.style.width = W + 'px';
+      hmCanvas.style.height = H + 'px';
+      const ctx = hmCtx;
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+
+      const pad = { l: 4, r: 4, t: 4, b: 4 };
+      const cw = W - pad.l - pad.r;
+      const ch = H - pad.t - pad.b;
+
+      // Draw using offscreen then scale
+      const offscreen = document.createElement('canvas');
+      offscreen.width = hmImageData.width;
+      offscreen.height = hmImageData.height;
+      offscreen.getContext('2d').putImageData(hmImageData, 0, 0);
+
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(offscreen, pad.l, pad.t, cw, ch);
+
+      // Update scrubber position
+      updateScrubber();
+    }
+
+    function updateScrubber() {
+      if (!csiData) { scrubber.style.display = 'none'; return; }
+      scrubber.style.display = 'block';
+      const wrap = hmCanvas.parentElement;
+      const W = wrap.clientWidth;
+      const pad = 4;
+      const cw = W - pad * 2;
+      const x = pad + (currentFrame / (csiData.num_frames - 1)) * cw;
+      scrubber.style.left = x + 'px';
+    }
+
+    // ── UI refs ────────────────────────────────────────────
+    const slider = document.getElementById('frame-slider');
+    const counter = document.getElementById('frame-counter');
+    const playBtn = document.getElementById('play-btn');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const fpsSelect = document.getElementById('fps-select');
+    const labelBtn = document.getElementById('label-btn');
+    const resetBtn = document.getElementById('reset-cam-btn');
+    const legendEl = document.getElementById('legend');
+    const fileInfo = document.getElementById('file-info');
+    const toastEl = document.getElementById('toast');
+    const rgbImg = document.getElementById('rgb-image');
+    const placeholder = document.getElementById('video-placeholder');
+    const antennaSelect = document.getElementById('antenna-select');
+
+    let imageLoadError = false;
+
+    function showToast(msg, ms = 2000) { toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(() => toastEl.classList.remove('show'), ms); }
+    function nocache(url) { return url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now(); }
+
+    function goToFrame(idx) {
+      if (!appData) return;
+      currentFrame = Math.max(0, Math.min(idx, appData.num_frames - 1));
+      slider.value = currentFrame;
+      counter.textContent = `${currentFrame + 1} / ${appData.num_frames}`;
+      fileInfo.textContent = appData.frame_names[currentFrame] || '';
+      updatePose(appData.frames[currentFrame]);
+      if (!imageLoadError) rgbImg.src = nocache('/api/rgb?frame=' + currentFrame);
+      drawLineChart(currentFrame);
+      updateScrubber();
+    }
+
+    rgbImg.onload = function () { placeholder.style.display = 'none'; rgbImg.style.display = 'block'; };
+    rgbImg.onerror = function () { if (currentFrame === 0) { imageLoadError = true; placeholder.style.display = 'block'; placeholder.querySelector('p').innerHTML = "No RGB frame"; rgbImg.style.display = 'none'; } };
+
+    slider.addEventListener('input', () => goToFrame(parseInt(slider.value)));
+    prevBtn.addEventListener('click', () => { stopPlay(); goToFrame(currentFrame - 1); });
+    nextBtn.addEventListener('click', () => { stopPlay(); goToFrame(currentFrame + 1); });
+    resetBtn.addEventListener('click', fitCamera);
+
+    function togglePlay() {
+      if (isPlaying) { stopPlay(); return; }
+      isPlaying = true; playBtn.textContent = '⏸'; playBtn.classList.add('active');
+      const fps = fpsSelect.value === 'auto' ? autoFps : parseInt(fpsSelect.value);
+      playInterval = setInterval(() => {
+        if (currentFrame >= appData.num_frames - 1) { goToFrame(0); return; }
+        goToFrame(currentFrame + 1);
+      }, 1000 / fps);
+    }
+    function stopPlay() { isPlaying = false; playBtn.textContent = '▶'; playBtn.classList.remove('active'); if (playInterval) clearInterval(playInterval); playInterval = null; }
+    playBtn.addEventListener('click', togglePlay);
+    fpsSelect.addEventListener('change', () => { if (isPlaying) { stopPlay(); togglePlay(); } });
+    labelBtn.addEventListener('click', () => {
+      showLabels = !showLabels; labelBtn.classList.toggle('active', showLabels);
+      for (const pg of personGroups) for (const lbl of pg.labels) lbl.visible = showLabels;
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft') { stopPlay(); goToFrame(currentFrame - 1); }
+      else if (e.key === 'ArrowRight') { stopPlay(); goToFrame(currentFrame + 1); }
+      else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+    });
+
+    antennaSelect.addEventListener('change', () => {
+      selectedAntenna = antennaSelect.value;
+      const antIdx = selectedAntenna === 'all' ? 'all' : parseInt(selectedAntenna);
+      buildHeatmapImage(antIdx);
+      drawHeatmap();
+      drawLineChart(currentFrame);
+    });
+
+    // ── Data loading ──────────────────────────────────────
+    function applyData(data) {
+      stopPlay();
+      appData = data;
+      depthOffset = computeDepthOffset(data);
+      clearPersonGroups();
+      slider.max = data.num_frames - 1;
+      slider.value = 0;
+      imageLoadError = false;
+      placeholder.style.display = 'block';
+      rgbImg.style.display = 'none';
+      rgbImg.src = '';
+
+      if (data.frame_names.length >= 2) {
+        const nums = data.frame_names.map(n => { const m = n.match(/\d+$/); return m ? parseInt(m[0]) : 0; }).filter(x => x > 0);
+        if (nums.length >= 2) { const span = nums[nums.length - 1] - nums[0]; if (span > 0) autoFps = Math.max(1, Math.round(nums.length / (span / 10) * 10) / 10); }
+      }
+      fpsSelect.options[0].textContent = `Auto (${autoFps})`;
+      onResize();
+      goToFrame(0);
+      fitCamera();
+    }
+
+    function applyCSI(data) {
+      csiData = data;
+      const antIdx = selectedAntenna === 'all' ? 'all' : parseInt(selectedAntenna);
+      buildHeatmapImage(antIdx);
+      drawHeatmap();
+      drawLineChart(currentFrame);
+    }
+
+    // ── Boot ──────────────────────────────────────────────
+    document.getElementById('loading-msg').textContent = 'Fetching data…';
+
+    Promise.all([
+      fetch(nocache('/api/config')).then(r => r.json()),
+      fetch(nocache('/api/data')).then(r => r.json()),
+      fetch(nocache('/api/csi')).then(r => r.json()).catch(() => null),
+    ])
+      .then(([cfg, data, csi]) => {
+        CFG = cfg;
+        legendEl.innerHTML = CFG.legend.map(it => `<div class="legend-item"><div class="legend-dot" style="background:${it.color}"></div>${it.label}</div>`).join('');
+        applyData(data);
+        if (csi && !csi.error) applyCSI(csi);
+        document.getElementById('loading').classList.add('hidden');
+      })
+      .catch(err => {
+        console.error(err);
+        document.getElementById('loading').innerHTML = '<p style="color:#f44;text-align:center">Failed to load.<br>Is the server running?</p>';
+      });
+  </script>
+</body>
+
+</html>
