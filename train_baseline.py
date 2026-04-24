@@ -155,7 +155,8 @@ def main():
             ) / config["train_loader"]["batch_size"]
 
             optimizer.zero_grad()
-            loss.backward(retain_graph=True)
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
             train_losses.append(loss.item())
 
