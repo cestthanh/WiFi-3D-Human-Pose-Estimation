@@ -116,20 +116,22 @@ def main():
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=config.get("learning_rate", 0.001))
 
-    num_epochs = config.get("epoch", 100)
-    n_epochs = 20
-    n_epochs_decay = 30
+    num_epochs     = config.get("epoch", 100)
+    n_epochs       = int(num_epochs * 0.4)        # 40% đầu: giữ nguyên LR
+    n_epochs_decay = num_epochs - n_epochs         # 60% sau: giảm dần về 0
     scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer,
-        lr_lambda=lambda ep: 1.0 - max(0, ep + 1 - n_epochs) / float(n_epochs_decay + 1)
+        lr_lambda=lambda ep: max(0.0, 1.0 - max(0, ep + 1 - n_epochs) / float(n_epochs_decay + 1))
     )
 
     checkpoint_dir = os.path.join(config.get("checkpoint", "./checkpoints/"), "baseline")
     os.makedirs(checkpoint_dir, exist_ok=True)
 
-    best_mpjpe = float("inf")
+    best_mpjpe     = float("inf")
     train_loss_log = []
-    val_mpjpe_log = []
+    val_mpjpe_log  = []
+    patience       = config.get("early_stop_patience", 20)
+    no_improve_cnt = 0
 
     # ------- Training Epochs -------
     print(f"\n{'='*60}")
@@ -168,11 +170,17 @@ def main():
         mpjpe, pa_mpjpe, pck50 = evaluate(model, val_loader, criterion, device, split_name=f"Epoch {epoch+1:03d}/Val")
         val_mpjpe_log.append(mpjpe)
 
-        # Lưu best model
+        # Lưu best model + Early Stopping
         if mpjpe < best_mpjpe:
-            best_mpjpe = mpjpe
+            best_mpjpe     = mpjpe
+            no_improve_cnt = 0
             torch.save(model.state_dict(), os.path.join(checkpoint_dir, "best.pt"))
             print(f"    ✅ Saved best model — MPJPE: {mpjpe:.2f}mm")
+        else:
+            no_improve_cnt += 1
+            if no_improve_cnt >= patience:
+                print(f"\n⏹️  Early stopping tại epoch {epoch+1} (không cải thiện sau {patience} epochs)")
+                break
 
     # ------- Test với best model -------
     print(f"\n{'='*60}")
