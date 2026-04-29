@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMFi — GT vs Predicted Skeleton</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #08080f;
+            color: #ccc;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            font-size: 12px
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            background: linear-gradient(90deg, #0d0d1a, #151535);
+            border-bottom: 1px solid rgba(100, 100, 255, .15);
+            flex-shrink: 0
+        }
+
+        header h1 {
+            font-size: 13px;
+            font-weight: 600;
+            background: linear-gradient(90deg, #00E5FF, #FF6D00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent
+        }
+
+        #file-info {
+            font-size: 10px;
+            color: #555;
+            font-weight: 300;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap
+        }
+
+        /* MPJPE badge */
+        #mpjpe-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0
+        }
+
+        .badge {
+            background: rgba(255, 109, 0, .12);
+            border: 1px solid rgba(255, 109, 0, .3);
+            border-radius: 6px;
+            padding: 3px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #FF6D00
+        }
+
+        .badge span {
+            color: #aaa;
+            font-weight: 300;
+            margin-right: 4px
+        }
+
+        #top-row {
+            display: flex;
+            flex: 1;
+            min-height: 0
+        }
+
+        #rgb-panel {
+            width: 340px;
+            background: #09090f;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            border-right: 1px solid rgba(100, 100, 255, .1);
+            flex-shrink: 0
+        }
+
+        #rgb-panel img,
+        #rgb-panel .placeholder {
+            width: 100%;
+            height: 100%;
+            object-fit: contain
+        }
+
+        .placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: #333
+        }
+
+        .placeholder svg {
+            width: 48px;
+            height: 48px
+        }
+
+        .placeholder p {
+            font-size: 11px
+        }
+
+        #skeleton-panel {
+            flex: 1;
+            position: relative
+        }
+
+        #skeleton-panel canvas {
+            display: block
+        }
+
+        /* Overlay legend + toggles */
+        #overlay {
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 6px
+        }
+
+        #legend {
+            background: rgba(8, 8, 20, .88);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(100, 100, 255, .15);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 10px
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 2px
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0
+        }
+
+        #toggle-bar {
+            display: flex;
+            gap: 6px
+        }
+
+        .toggle-btn {
+            padding: 4px 10px;
+            border-radius: 12px;
+            border: 1px solid;
+            cursor: pointer;
+            font-size: 10px;
+            font-family: inherit;
+            font-weight: 600;
+            transition: all .2s
+        }
+
+        #toggle-gt {
+            background: rgba(0, 229, 255, .1);
+            border-color: #00E5FF;
+            color: #00E5FF
+        }
+
+        #toggle-pred {
+            background: rgba(255, 109, 0, .1);
+            border-color: #FF6D00;
+            color: #FF6D00
+        }
+
+        .toggle-btn.off {
+            opacity: 0.35
+        }
+
+        /* CSI */
+        #csi-row {
+            height: 240px;
+            display: flex;
+            flex-direction: column;
+            border-top: 1px solid rgba(100, 100, 255, .15);
+            flex-shrink: 0;
+            background: #0a0a14
+        }
+
+        #csi-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 16px;
+            border-bottom: 1px solid rgba(100, 100, 255, .08);
+            flex-shrink: 0
+        }
+
+        #csi-header span {
+            font-size: 11px;
+            font-weight: 600;
+            color: #7c7cff;
+            letter-spacing: .04em
+        }
+
+        #csi-panels {
+            display: flex;
+            flex: 1;
+            min-height: 0
+        }
+
+        #linechart-wrap {
+            flex: 1;
+            position: relative;
+            border-right: 1px solid rgba(100, 100, 255, .08)
+        }
+
+        #linechart-wrap canvas {
+            width: 100%;
+            height: 100%;
+            display: block
+        }
+
+        .chart-label {
+            position: absolute;
+            font-size: 9px;
+            color: #555;
+            pointer-events: none
+        }
+
+        #lc-ylabel {
+            top: 4px;
+            left: 6px
+        }
+
+        #lc-xlabel {
+            bottom: 2px;
+            right: 8px
+        }
+
+        #lc-title {
+            top: 4px;
+            right: 8px;
+            color: #7c7cff;
+            font-weight: 500
+        }
+
+        #heatmap-wrap {
+            flex: 1.2;
+            position: relative
+        }
+
+        #heatmap-wrap canvas {
+            width: 100%;
+            height: 100%;
+            display: block
+        }
+
+        #hm-title {
+            position: absolute;
+            top: 4px;
+            right: 8px;
+            font-size: 9px;
+            color: #7c7cff;
+            font-weight: 500;
+            pointer-events: none
+        }
+
+        #hm-ylabel {
+            position: absolute;
+            top: 4px;
+            left: 6px;
+            font-size: 9px;
+            color: #555;
+            pointer-events: none
+        }
+
+        #hm-xlabel {
+            position: absolute;
+            bottom: 2px;
+            right: 8px;
+            font-size: 9px;
+            color: #555;
+            pointer-events: none
+        }
+
+        #scrubber {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: rgba(255, 109, 0, .9);
+            pointer-events: none;
+            z-index: 5;
+            box-shadow: 0 0 6px rgba(255, 109, 0, .5)
+        }
+
+        #antenna-select {
+            background: #12121f;
+            border: 1px solid rgba(100, 100, 255, .2);
+            color: #aaa;
+            padding: 3px 6px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-family: inherit
+        }
+
+        /* Controls */
+        #controls {
+            background: linear-gradient(135deg, #0d0d1a, #151530);
+            padding: 7px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-top: 1px solid rgba(100, 100, 255, .15);
+            flex-shrink: 0
+        }
+
+        .ctrl-btn {
+            background: rgba(120, 120, 255, .12);
+            border: 1px solid rgba(120, 120, 255, .2);
+            color: #aaa;
+            width: 30px;
+            height: 30px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .2s;
+            flex-shrink: 0
+        }
+
+        .ctrl-btn:hover {
+            background: rgba(120, 120, 255, .25);
+            color: #fff
+        }
+
+        .ctrl-btn.active {
+            background: rgba(255, 110, 199, .2);
+            border-color: rgba(255, 110, 199, .4);
+            color: #ff6ec7
+        }
+
+        #frame-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, .08);
+            outline: none;
+            cursor: pointer
+        }
+
+        #frame-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00E5FF, #FF6D00);
+            cursor: pointer
+        }
+
+        #frame-counter {
+            font-size: 11px;
+            color: #888;
+            min-width: 65px;
+            text-align: center;
+            font-variant-numeric: tabular-nums
+        }
+
+        select {
+            background: #12121f;
+            border: 1px solid rgba(100, 100, 255, .2);
+            color: #aaa;
+            padding: 4px 7px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-family: inherit;
+            cursor: pointer
+        }
+
+        /* Loading */
+        #loading {
+            position: fixed;
+            inset: 0;
+            background: #08080f;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            z-index: 100;
+            transition: opacity .5s
+        }
+
+        #loading.hidden {
+            opacity: 0;
+            pointer-events: none
+        }
+
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid rgba(120, 120, 255, .15);
+            border-top-color: #00E5FF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite
+        }
+
+        #loading-msg {
+            font-size: 12px;
+            color: #666
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 55px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(120, 120, 255, .9);
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 18px;
+            font-size: 11px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .3s;
+            z-index: 200
+        }
+
+        #toast.show {
+            opacity: 1
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loading">
+        <div class="spinner"></div>
+        <div id="loading-msg">Loading…</div>
+    </div>
+
+    <header>
+        <h1>🦴 MMFi — GT vs Predicted Skeleton</h1>
+        <div id="mpjpe-badge">
+            <div class="badge" id="mpjpe-val"><span>MPJPE</span>—</div>
+        </div>
+        <span id="file-info">Loading…</span>
+    </header>
+
+    <div id="top-row">
+        <div id="rgb-panel">
+            <div class="placeholder" id="video-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                    <polygon points="10,8 16,12 10,16" />
+                </svg>
+                <p>No RGB frame</p>
+            </div>
+            <img id="rgb-image" style="display:none" alt="RGB Frame" />
+        </div>
+        <div id="skeleton-panel">
+            <div id="overlay">
+                <div id="toggle-bar">
+                    <button class="toggle-btn" id="toggle-gt">● GT</button>
+                    <button class="toggle-btn" id="toggle-pred">● Predicted</button>
+                </div>
+                <div id="legend"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CSI -->
+    <div id="csi-row">
+        <div id="csi-header">
+            <span>📡 WiFi-CSI Amplitude</span>
+            <select id="antenna-select">
+                <option value="all" selected>All Antennas</option>
+                <option value="0">Antenna 1</option>
+                <option value="1">Antenna 2</option>
+                <option value="2">Antenna 3</option>
+            </select>
+        </div>
+        <div id="csi-panels">
+            <div id="linechart-wrap">
+                <canvas id="linechart-canvas"></canvas>
+                <span class="chart-label" id="lc-title">Per-Frame Amplitude</span>
+                <span class="chart-label" id="lc-ylabel">Amp (dB)</span>
+                <span class="chart-label" id="lc-xlabel">Subcarrier</span>
+            </div>
+            <div id="heatmap-wrap">
+                <canvas id="heatmap-canvas"></canvas>
+                <div id="scrubber"></div>
+                <span id="hm-title">Amplitude Heatmap</span>
+                <span id="hm-ylabel">Subcarrier</span>
+                <span id="hm-xlabel">Frame →</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div id="controls">
+        <button class="ctrl-btn" id="prev-btn" title="Previous (←)">◀</button>
+        <button class="ctrl-btn" id="play-btn" title="Play/Pause (Space)">▶</button>
+        <button class="ctrl-btn" id="next-btn" title="Next (→)">▶</button>
+        <input type="range" id="frame-slider" min="0" max="0" value="0">
+        <span id="frame-counter">0 / 0</span>
+        <select id="fps-select">
+            <option value="auto" selected>Auto FPS</option>
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="15">15</option>
+            <option value="30">30</option>
+        </select>
+        <button class="ctrl-btn" id="label-btn" title="Labels">A</button>
+        <button class="ctrl-btn" id="reset-cam-btn" title="Reset cam">⟳</button>
+    </div>
+    <div id="toast"></div>
+
+    <script type="importmap">
+  {"imports":{"three":"https://unpkg.com/three@0.162.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.162.0/examples/jsm/"}}
+  </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        let CFG = null, appData = null, predData = null, csiData = null;
+        let currentFrame = 0, isPlaying = false, playInterval = null;
+        let showLabels = false, autoFps = 10, selectedAntenna = 'all';
+        let showGT = true, showPred = true;
+
+        // ── Three.js ────────────────────────────────────────────────
+        const container = document.getElementById('skeleton-panel');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x08080f);
+        const camera = new THREE.PerspectiveCamera(55, 1, 0.01, 200);
+        camera.position.set(0, 1.5, 5);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.domElement.style.cssText = 'position:absolute;top:0;pointer-events:none';
+        container.appendChild(labelRenderer.domElement);
+        const orbitCtrl = new OrbitControls(camera, renderer.domElement);
+        orbitCtrl.enableDamping = true; orbitCtrl.dampingFactor = 0.08;
+        orbitCtrl.minDistance = 0.2; orbitCtrl.maxDistance = 30;
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        dirLight.position.set(3, 5, 3); scene.add(dirLight);
+        scene.add(new THREE.GridHelper(8, 40, 0x1a1a2e, 0x111120));
+
+        function hexColor(s) { return new THREE.Color(parseInt(s.replace('#', '0x'))); }
+
+        // ── Build one skeleton group ─────────────────────────────────
+        function buildSkeleton(jointColors, edgeColors) {
+            const group = new THREE.Group();
+            const joints = [], labels = [], bones = [];
+            for (let i = 0; i < 17; i++) {
+                const c = hexColor(jointColors[i]);
+                const mat = new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: .4, roughness: .3 });
+                const mesh = new THREE.Mesh(new THREE.SphereGeometry(.022, 12, 12), mat);
+                group.add(mesh); joints.push(mesh);
+                const div = document.createElement('div');
+                div.style.cssText = 'color:#fff;font-size:9px;background:rgba(0,0,0,.6);padding:1px 4px;border-radius:3px;white-space:nowrap;pointer-events:none';
+                const lbl = new CSS2DObject(div); lbl.position.set(0, .035, 0);
+                mesh.add(lbl); labels.push(lbl); lbl.visible = false;
+            }
+            for (let i = 0; i < CFG.edges.length; i++) {
+                const c = hexColor(edgeColors[i]);
+                const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+                const ln = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: c, linewidth: 2 }));
+                group.add(ln); bones.push(ln);
+            }
+            scene.add(group);
+            return { group, joints, bones, labels };
+        }
+
+        let gtSkeleton = null, predSkeleton = null;
+        let depthOffset = 0;
+        function toThree(k) { return [k[0], -k[1], -(k[2] - depthOffset)]; }
+        function computeDepthOffset(frames) { let s = 0, n = 0; for (const p of frames[0]) for (const k of p) { s += k[2]; n++; } return s / n; }
+
+        function updateSkeleton(sk, kptsOfFrame) {
+            if (!sk || !kptsOfFrame) return;
+            const kpts = Array.isArray(kptsOfFrame[0][0]) ? kptsOfFrame[0] : kptsOfFrame; // handle [[kpts]] or [kpts]
+            for (let i = 0; i < 17; i++) {
+                const [tx, ty, tz] = toThree(kpts[i]);
+                sk.joints[i].position.set(tx, ty, tz);
+                if (CFG.keypoint_names && sk.labels[i]) sk.labels[i].element.textContent = CFG.keypoint_names[i];
+            }
+            for (let i = 0; i < CFG.edges.length; i++) {
+                const [a, b] = CFG.edges[i], pos = sk.bones[i].geometry.attributes.position.array;
+                const [ax, ay, az] = toThree(kpts[a]), [bx, by, bz] = toThree(kpts[b]);
+                pos[0] = ax; pos[1] = ay; pos[2] = az; pos[3] = bx; pos[4] = by; pos[5] = bz;
+                sk.bones[i].geometry.attributes.position.needsUpdate = true;
+            }
+        }
+
+        function fitCamera() {
+            if (!appData?.frames?.length) return;
+            let cx = 0, cy = 0, cz = 0, n = 0;
+            for (const p of appData.frames[0]) for (const k of p) { const [tx, ty, tz] = toThree(k); cx += tx; cy += ty; cz += tz; n++; }
+            cx /= n; cy /= n; cz /= n;
+            orbitCtrl.target.set(cx, cy, cz); camera.position.set(cx + 1.5, cy + 1.5, cz + 3); orbitCtrl.update();
+        }
+
+        function onResize() {
+            const w = container.clientWidth, h = container.clientHeight;
+            camera.aspect = w / h; camera.updateProjectionMatrix();
+            renderer.setSize(w, h); labelRenderer.setSize(w, h);
+            drawHeatmap(); drawLineChart(currentFrame);
+        }
+        window.addEventListener('resize', onResize);
+        (function animate() { requestAnimationFrame(animate); orbitCtrl.update(); renderer.render(scene, camera); labelRenderer.render(scene, camera); })();
+
+        // ── MPJPE badge ─────────────────────────────────────────────
+        const mpjpeBadge = document.getElementById('mpjpe-val');
+        function updateMpjpe(frameIdx) {
+            if (predData?.mpjpe_frames && predData.mpjpe_frames[frameIdx] != null) {
+                const mm = (predData.mpjpe_frames[frameIdx] * 1000).toFixed(1);
+                mpjpeBadge.innerHTML = `<span>MPJPE</span>${mm} mm`;
+            } else {
+                mpjpeBadge.innerHTML = `<span>MPJPE</span>—`;
+            }
+        }
+
+        // ── Toggle buttons ───────────────────────────────────────────
+        document.getElementById('toggle-gt').addEventListener('click', () => {
+            showGT = !showGT;
+            document.getElementById('toggle-gt').classList.toggle('off', !showGT);
+            if (gtSkeleton) gtSkeleton.group.visible = showGT;
+        });
+        document.getElementById('toggle-pred').addEventListener('click', () => {
+            showPred = !showPred;
+            document.getElementById('toggle-pred').classList.toggle('off', !showPred);
+            if (predSkeleton) predSkeleton.group.visible = showPred;
+        });
+
+        // ── CSI ─────────────────────────────────────────────────────
+        const ANT_COLORS = ['#FF6B6B', '#4ECDC4', '#FFD93D'];
+        const lcCanvas = document.getElementById('linechart-canvas'), lcCtx = lcCanvas.getContext('2d');
+        const hmCanvas = document.getElementById('heatmap-canvas'), hmCtx = hmCanvas.getContext('2d');
+        const scrubber = document.getElementById('scrubber');
+
+        function inferno(t) {
+            t = Math.max(0, Math.min(1, t)); let r, g, b;
+            if (t < .25) { const s = t / .25; r = Math.round(10 + s * 50); g = Math.round(5 + s * 10); b = Math.round(30 + s * 80); }
+            else if (t < .5) { const s = (t - .25) / .25; r = Math.round(60 + s * 140); g = Math.round(15 + s * 20); b = Math.round(110 - s * 30); }
+            else if (t < .75) { const s = (t - .5) / .25; r = Math.round(200 + s * 45); g = Math.round(35 + s * 100); b = Math.round(80 - s * 60); }
+            else { const s = (t - .75) / .25; r = Math.round(245 + s * 10); g = Math.round(135 + s * 100); b = Math.round(20 + s * 30); }
+            return `rgb(${Math.min(255, r)},${Math.min(255, g)},${Math.min(255, b)})`;
+        }
+
+        function drawLineChart(fi) {
+            if (!csiData) return;
+            const W = lcCanvas.parentElement.clientWidth, H = lcCanvas.parentElement.clientHeight - 20;
+            lcCanvas.width = W * devicePixelRatio; lcCanvas.height = H * devicePixelRatio;
+            lcCanvas.style.width = W + 'px'; lcCanvas.style.height = H + 'px';
+            const ctx = lcCtx; ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0); ctx.clearRect(0, 0, W, H);
+            const pad = { l: 36, r: 8, t: 18, b: 20 }, cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
+            const { num_subcarriers: nSub, amp_min: ampMin, amp_max: ampMax } = csiData;
+            const range = ampMax - ampMin || 1;
+            ctx.strokeStyle = 'rgba(255,255,255,.06)'; ctx.lineWidth = 0.5;
+            for (let i = 0; i <= 4; i++) {
+                const y = pad.t + ch * (1 - i / 4);
+                ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + cw, y); ctx.stroke();
+                ctx.fillStyle = '#444'; ctx.font = '9px Inter'; ctx.fillText((ampMin + range * i / 4).toFixed(0), 2, y + 3);
+            }
+            const frame = csiData.heatmap[fi]; if (!frame) return;
+            const antennas = selectedAntenna === 'all' ? [0, 1, 2] : [parseInt(selectedAntenna)];
+            for (const ant of antennas) {
+                const row = frame[ant]; ctx.strokeStyle = ANT_COLORS[ant]; ctx.lineWidth = selectedAntenna === 'all' ? 1.2 : 2;
+                ctx.globalAlpha = selectedAntenna === 'all' ? .85 : 1; ctx.beginPath();
+                for (let s = 0; s < nSub; s++) {
+                    const x = pad.l + (s / (nSub - 1)) * cw, y = pad.t + ch * (1 - (row[s] - ampMin) / range);
+                    s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                }
+                ctx.stroke(); ctx.globalAlpha = 1;
+            }
+        }
+
+        let hmImageData = null;
+        function buildHeatmapImage(antIdx) {
+            if (!csiData) return;
+            const T = csiData.num_frames, S = csiData.num_subcarriers;
+            const ampMin = csiData.amp_min, range = (csiData.amp_max - csiData.amp_min) || 1;
+            const imgData = new ImageData(T, S); const d = imgData.data;
+            for (let f = 0; f < T; f++) for (let s = 0; s < S; s++) {
+                let val = antIdx === 'all' ? (csiData.heatmap[f][0][s] + csiData.heatmap[f][1][s] + csiData.heatmap[f][2][s]) / 3 : csiData.heatmap[f][antIdx][s];
+                const col = inferno((val - ampMin) / range), m = col.match(/\d+/g);
+                const px = ((S - 1 - s) * T + f) * 4; d[px] = parseInt(m[0]); d[px + 1] = parseInt(m[1]); d[px + 2] = parseInt(m[2]); d[px + 3] = 255;
+            }
+            hmImageData = imgData;
+        }
+        function drawHeatmap() {
+            if (!csiData || !hmImageData) return;
+            const W = hmCanvas.parentElement.clientWidth, H = hmCanvas.parentElement.clientHeight - 20;
+            hmCanvas.width = W * devicePixelRatio; hmCanvas.height = H * devicePixelRatio;
+            hmCanvas.style.width = W + 'px'; hmCanvas.style.height = H + 'px';
+            const ctx = hmCtx; ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+            const off = document.createElement('canvas'); off.width = hmImageData.width; off.height = hmImageData.height;
+            off.getContext('2d').putImageData(hmImageData, 0, 0);
+            ctx.imageSmoothingEnabled = false; ctx.drawImage(off, 4, 4, W - 8, H - 8);
+            updateScrubber();
+        }
+        function updateScrubber() {
+            if (!csiData) { scrubber.style.display = 'none'; return; }
+            scrubber.style.display = 'block';
+            const wrap = hmCanvas.parentElement, W = wrap.clientWidth;
+            scrubber.style.left = (4 + (currentFrame / (csiData.num_frames - 1)) * (W - 8)) + 'px';
+        }
+
+        // ── UI ─────────────────────────────────────────────────────
+        const slider = document.getElementById('frame-slider');
+        const counter = document.getElementById('frame-counter');
+        const playBtn = document.getElementById('play-btn');
+        const fpsSelect = document.getElementById('fps-select');
+        const fileInfo = document.getElementById('file-info');
+        const toastEl = document.getElementById('toast');
+        const rgbImg = document.getElementById('rgb-image');
+        const placeholder = document.getElementById('video-placeholder');
+        const antennaSelect = document.getElementById('antenna-select');
+        let imageLoadError = false;
+        function showToast(msg, ms = 2000) { toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(() => toastEl.classList.remove('show'), ms); }
+        function nocache(url) { return url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now(); }
+
+        function goToFrame(idx) {
+            if (!appData) return;
+            currentFrame = Math.max(0, Math.min(idx, appData.num_frames - 1));
+            slider.value = currentFrame; counter.textContent = `${currentFrame + 1} / ${appData.num_frames}`;
+            fileInfo.textContent = appData.frame_names[currentFrame] || '';
+            // Update GT
+            if (gtSkeleton && appData.frames[currentFrame]) updateSkeleton(gtSkeleton, appData.frames[currentFrame]);
+            // Update Predicted
+            if (predSkeleton && predData?.frames?.[currentFrame]) updateSkeleton(predSkeleton, predData.frames[currentFrame]);
+            updateMpjpe(currentFrame);
+            if (!imageLoadError) rgbImg.src = nocache('/api/rgb?frame=' + currentFrame);
+            drawLineChart(currentFrame); updateScrubber();
+        }
+
+        rgbImg.onload = () => { placeholder.style.display = 'none'; rgbImg.style.display = 'block'; };
+        rgbImg.onerror = () => { if (currentFrame === 0) { imageLoadError = true; placeholder.style.display = 'block'; rgbImg.style.display = 'none'; } };
+        slider.addEventListener('input', () => goToFrame(parseInt(slider.value)));
+        document.getElementById('prev-btn').addEventListener('click', () => { stopPlay(); goToFrame(currentFrame - 1); });
+        document.getElementById('next-btn').addEventListener('click', () => { stopPlay(); goToFrame(currentFrame + 1); });
+        document.getElementById('reset-cam-btn').addEventListener('click', fitCamera);
+        document.getElementById('label-btn').addEventListener('click', () => {
+            showLabels = !showLabels;
+            document.getElementById('label-btn').classList.toggle('active', showLabels);
+            [gtSkeleton, predSkeleton].forEach(sk => { if (sk) sk.labels.forEach(l => l.visible = showLabels); });
+        });
+        function togglePlay() {
+            if (isPlaying) { stopPlay(); return; }
+            isPlaying = true; playBtn.textContent = '⏸'; playBtn.classList.add('active');
+            const fps = fpsSelect.value === 'auto' ? autoFps : parseInt(fpsSelect.value);
+            playInterval = setInterval(() => { if (currentFrame >= appData.num_frames - 1) { goToFrame(0); return; } goToFrame(currentFrame + 1); }, 1000 / fps);
+        }
+        function stopPlay() { isPlaying = false; playBtn.textContent = '▶'; playBtn.classList.remove('active'); if (playInterval) clearInterval(playInterval); playInterval = null; }
+        document.getElementById('play-btn').addEventListener('click', togglePlay);
+        fpsSelect.addEventListener('change', () => { if (isPlaying) { stopPlay(); togglePlay(); } });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowLeft') { stopPlay(); goToFrame(currentFrame - 1); }
+            else if (e.key === 'ArrowRight') { stopPlay(); goToFrame(currentFrame + 1); }
+            else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+        });
+        antennaSelect.addEventListener('change', () => {
+            selectedAntenna = antennaSelect.value;
+            buildHeatmapImage(selectedAntenna === 'all' ? 'all' : parseInt(selectedAntenna));
+            drawHeatmap(); drawLineChart(currentFrame);
+        });
+
+        // ── Boot ───────────────────────────────────────────────────
+        const loadingMsg = document.getElementById('loading-msg');
+        loadingMsg.textContent = 'Connecting to server…';
+
+        function nocacheUrl(url) { return url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now(); }
+
+        async function waitUntilReady(interval = 1000) {
+            while (true) {
+                try {
+                    const res = await fetch(nocacheUrl('/api/status'));
+                    if (res.ok) {
+                        const s = await res.json();
+                        if (s.ready) return true;
+                        loadingMsg.textContent = '⏳ ' + (s.status || 'Loading…');
+                    }
+                } catch (_) {
+                    loadingMsg.textContent = '⏳ Waiting for server…';
+                }
+                await new Promise(r => setTimeout(r, interval));
+            }
+        }
+
+        async function boot() {
+            try {
+                await waitUntilReady();
+                loadingMsg.textContent = 'Loading visualization…';
+                const [cfg, gt, pred, csi] = await Promise.all([
+                    fetch(nocacheUrl('/api/config')).then(r => r.json()),
+                    fetch(nocacheUrl('/api/data')).then(r => r.json()),
+                    fetch(nocacheUrl('/api/predict')).then(r => r.json()).catch(() => null),
+                    fetch(nocacheUrl('/api/csi')).then(r => r.json()).catch(() => null),
+                ]);
+                CFG = cfg;
+                // Legend
+                document.getElementById('legend').innerHTML =
+                    CFG.legend.map(it => `<div class="legend-item"><div class="legend-dot" style="background:${it.color}"></div>${it.label}</div>`).join('');
+                // Build skeletons
+                gtSkeleton = buildSkeleton(CFG.gt_joint_colors, CFG.gt_edge_colors);
+                predSkeleton = buildSkeleton(CFG.pred_joint_colors, CFG.pred_edge_colors);
+                predSkeleton.group.visible = CFG.has_model && pred && !pred.error;
+
+                if (!CFG.has_model || !pred || pred.error) {
+                    document.getElementById('toggle-pred').style.opacity = '0.3';
+                    document.getElementById('toggle-pred').title = 'Model not loaded';
+                    showToast('⚠️ Model không load được — chỉ hiển thị GT', 4000);
+                }
+
+                // GT data
+                appData = gt;
+                depthOffset = computeDepthOffset(gt.frames);
+                slider.max = gt.num_frames - 1;
+
+                // Pred data
+                predData = pred;
+
+                // CSI
+                if (csi && !csi.error) {
+                    csiData = csi;
+                    buildHeatmapImage('all');
+                }
+
+                // FPS estimate
+                if (gt.frame_names.length >= 2) {
+                    const nums = gt.frame_names.map(n => { const m = n.match(/\d+$/); return m ? parseInt(m[0]) : 0; }).filter(x => x > 0);
+                    if (nums.length >= 2) { const span = nums[nums.length - 1] - nums[0]; if (span > 0) autoFps = Math.max(1, Math.round(nums.length / (span / 10) * 10) / 10); }
+                }
+                fpsSelect.options[0].textContent = `Auto (${autoFps})`;
+
+                onResize(); goToFrame(0); fitCamera();
+                document.getElementById('loading').classList.add('hidden');
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loading').innerHTML =
+                    `<p style="color:#f44;text-align:center">❌ Lỗi: ${err.message}<br><small style="color:#888">Kiểm tra terminal xem có lỗi không.</small></p>`;
+            }
+        }
+        boot();
+    </script>
+</body>
+
+</html>
