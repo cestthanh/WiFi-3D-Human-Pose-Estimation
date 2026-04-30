@@ -51,7 +51,7 @@ def evaluate(model, loader, criterion, device, split_name="val"):
             confidence = keypoint[:, :, 2:3]            # (B, 17, 1)
 
             pred_xy, _ = model(csi_data)                # (B, 2, 17) or (B, 17, 2)
-            pred_xy = pred_xy.squeeze()
+            pred_xy = pred_xy.reshape(-1, 17, 2)
 
             loss = criterion(
                 torch.mul(confidence, pred_xy),
@@ -149,7 +149,7 @@ def main():
             confidence = keypoint[:, :, 2:3]
 
             pred_xy, _ = model(csi_data)
-            pred_xy = pred_xy.squeeze()
+            pred_xy = pred_xy.reshape(-1, 17, 2)
 
             loss = criterion(
                 torch.mul(confidence, pred_xy),

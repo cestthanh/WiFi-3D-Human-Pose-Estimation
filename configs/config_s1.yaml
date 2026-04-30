@@ -36,6 +36,7 @@ test_loader:
   num_workers: 0
 
 # Training hyperparameters
-epoch: 100
-learning_rate: 0.001
+epoch: 150
+learning_rate: 0.0001
+early_stop_patience: 30
 checkpoint: ./checkpoints/s1_baseline/
